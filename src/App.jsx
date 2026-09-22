@@ -51,7 +51,6 @@ export default function App() {
           throw new Error("Data soal kosong dari API.");
         }
       } catch (error) {
-        // Cetak error asli ke console browser (tekan F12 untuk melihat)
         console.error("Detail Error Fetch:", error);
         setErrorMessage(
           "Gagal memuat soal dari Trivia DB. Periksa koneksi internet atau jaringanmu.",
