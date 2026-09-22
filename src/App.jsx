@@ -2,133 +2,71 @@ import React, { useState, useEffect } from "react";
 import "./App.css";
 
 export default function App() {
-  // Daftar awal soal Kuis IPS Indonesia beserta pilihan jawabannya
-  const initialQuestions = [
-    {
-      question: "Ibu kota negara Indonesia saat ini adalah...",
-      answers: ["Surabaya", "Jakarta", "Bandung", "Medan"],
-      correctAnswer: "Jakarta",
-    },
-    {
-      question: "Mata uang resmi yang digunakan di Indonesia adalah...",
-      answers: ["Ringgit", "Baht", "Rupiah", "Peso"],
-      correctAnswer: "Rupiah",
-    },
-    {
-      question:
-        "Pulau terbesar di Indonesia berdasarkan luas wilayahnya adalah...",
-      answers: ["Jawa", "Sumatra", "Kalimantan", "Sulawesi"],
-      correctAnswer: "Kalimantan",
-    },
-    {
-      question: "Semboyan negara Indonesia adalah...",
-      answers: [
-        "Tut Wuri Handayani",
-        "Bhinneka Tunggal Ika",
-        "Pancasila",
-        "Garuda Pancasila",
-      ],
-      correctAnswer: "Bhinneka Tunggal Ika",
-    },
-    {
-      question:
-        "Garis khayal yang membagi bumi menjadi belahan bumi utara dan selatan disebut...",
-      answers: [
-        "Garis Bujur",
-        "Garis Meridian",
-        "Garis Khatulistiwa",
-        "Garis Wallace",
-      ],
-      correctAnswer: "Garis Khatulistiwa",
-    },
-    {
-      question:
-        "Danau terbesar di Indonesia yang terletak di Sumatra Utara adalah...",
-      answers: [
-        "Danau Toba",
-        "Danau Singkarak",
-        "Danau Poso",
-        "Danau Maninjau",
-      ],
-      correctAnswer: "Danau Toba",
-    },
-    {
-      question:
-        "Perundingan yang menghasilkan pengakuan kedaulatan Indonesia oleh Belanda pada tahun 1949 adalah...",
-      answers: [
-        "Perjanjian Linggarjati",
-        "Perjanjian Renville",
-        "KMB (Konferensi Meja Bundar)",
-        "Perjanjian Roem-Royen",
-      ],
-      correctAnswer: "KMB (Konferensi Meja Bundar)",
-    },
-    {
-      question:
-        "Suku bangsa asli yang mendiami wilayah Papua bagian pegunungan tengah salah satunya adalah...",
-      answers: ["Suku Asmat", "Suku Dani", "Suku Baduy", "Suku Toraja"],
-      correctAnswer: "Suku Dani",
-    },
-    {
-      question:
-        "Batas wilayah Indonesia sebelah utara berbatasan langsung dengan negara...",
-      answers: ["Australia", "Malaysia", "Timor Leste", "Papua Nugini"],
-      correctAnswer: "Malaysia",
-    },
-    {
-      question:
-        "Lembaga tinggi negara yang bertugas membuat undang-undang di Indonesia adalah...",
-      answers: ["MPR", "DPR", "MA", "MK"],
-      correctAnswer: "DPR",
-    },
-  ];
-
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState("");
   const [isFinished, setIsFinished] = useState(false);
 
-  // State tambahan untuk Loading dan Error
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Mengacak urutan pilihan jawaban (answers) SEKALI saat komponen dimuat
+  const decodeHTML = (html) => {
+    const txt = document.createElement("textarea");
+    txt.innerHTML = html;
+    return txt.value;
+  };
+
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const fetchTriviaQuestions = async () => {
       try {
-        if (initialQuestions.length > 0) {
-          // Format dan acak posisi jawaban di setiap soal
-          const formattedQuestions = initialQuestions.map((item) => {
-            const shuffledAnswers = [...item.answers].sort(
-              () => Math.random() - 0.5,
-            );
+        setLoading(true);
+        const response = await fetch(
+          "https://opentdb.com/api.php?amount=5&type=multiple",
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.results && data.results.length > 0) {
+          const formattedQuestions = data.results.map((item) => {
+            const allAnswers = [...item.incorrect_answers, item.correct_answer];
+            const shuffledAnswers = allAnswers
+              .map((ans) => decodeHTML(ans))
+              .sort(() => Math.random() - 0.5);
+
             return {
-              ...item,
+              question: decodeHTML(item.question),
               answers: shuffledAnswers,
+              correctAnswer: decodeHTML(item.correct_answer),
             };
           });
 
           setQuestions(formattedQuestions);
           setLoading(false);
         } else {
-          throw new Error("Data soal tidak ditemukan.");
+          throw new Error("Data soal kosong dari API.");
         }
       } catch (error) {
-        setErrorMessage("Gagal memuat soal, coba lagi");
+        // Cetak error asli ke console browser (tekan F12 untuk melihat)
+        console.error("Detail Error Fetch:", error);
+        setErrorMessage(
+          "Gagal memuat soal dari Trivia DB. Periksa koneksi internet atau jaringanmu.",
+        );
         setLoading(false);
       }
-    }, 800); // Simulasi waktu muat sejenak
+    };
 
-    return () => clearTimeout(timer);
+    fetchTriviaQuestions();
   }, []);
 
-  // Fungsi saat tombol jawaban diklik
   const handleAnswerSelect = (answer) => {
     setSelectedAnswer(answer);
   };
 
-  // Fungsi untuk lanjut ke soal berikutnya atau menyelesaikan kuis
   const handleNextQuestion = () => {
     if (selectedAnswer === questions[currentIndex].correctAnswer) {
       setScore(score + 1);
@@ -143,29 +81,26 @@ export default function App() {
     }
   };
 
-  // Fungsi untuk mengulang kuis
   const handleRestart = () => {
     window.location.reload();
   };
 
-  // Tampilan ketika status masih loading
   if (loading) {
     return (
       <div
         style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
       >
-        <h2>Memuat soal... ⏳</h2>
+        <h2>Memuat soal dari Trivia DB... ⏳</h2>
       </div>
     );
   }
 
-  // Tampilan ketika terjadi error
   if (errorMessage) {
     return (
       <div
         style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
       >
-        <h2 style={{ color: "red" }}>{errorMessage}</h2>
+        <h2 style={{ color: "red", padding: "0 20px" }}>{errorMessage}</h2>
         <button
           onClick={() => window.location.reload()}
           style={{
@@ -197,9 +132,7 @@ export default function App() {
     >
       {!isFinished ? (
         <div>
-          <h3 style={{ color: "#007BFF" }}>
-            Kuis Ilmu Pengetahuan Sosial (IPS) Indonesia 🇮🇩
-          </h3>
+          <h3 style={{ color: "#007BFF" }}>Kuis Trivia Online 🌍</h3>
           <h4>
             Soal {currentIndex + 1} dari {questions.length}
           </h4>
@@ -256,7 +189,7 @@ export default function App() {
         </div>
       ) : (
         <div style={{ textAlign: "center" }}>
-          <h2>Kuis IPS Indonesia Selesai! 🎉</h2>
+          <h2>Kuis Selesai! 🎉</h2>
           <p style={{ fontSize: "18px" }}>Skor kamu:</p>
           <h1 style={{ color: "#4CAF50" }}>
             {score} / {questions.length}
