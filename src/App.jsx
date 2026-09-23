@@ -1,21 +1,39 @@
 import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import "./App.css";
 
+const decodeHTML = (html) => {
+  const txt = document.createElement("textarea");
+  txt.innerHTML = html;
+  return txt.value;
+};
+
 export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<QuizScreen />} />
+        <Route path="/result" element={<ResultScreen />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+function QuizScreen() {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState("");
-  const [isFinished, setIsFinished] = useState(false);
-
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const decodeHTML = (html) => {
-    const txt = document.createElement("textarea");
-    txt.innerHTML = html;
-    return txt.value;
-  };
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchTriviaQuestions = async () => {
@@ -67,8 +85,10 @@ export default function App() {
   };
 
   const handleNextQuestion = () => {
+    let updatedScore = score;
     if (selectedAnswer === questions[currentIndex].correctAnswer) {
-      setScore(score + 1);
+      updatedScore = score + 1;
+      setScore(updatedScore);
     }
 
     setSelectedAnswer("");
@@ -76,12 +96,10 @@ export default function App() {
     if (nextIndex < questions.length) {
       setCurrentIndex(nextIndex);
     } else {
-      setIsFinished(true);
+      navigate("/result", {
+        state: { score: updatedScore, total: questions.length },
+      });
     }
-  };
-
-  const handleRestart = () => {
-    window.location.reload();
   };
 
   if (loading) {
@@ -129,87 +147,106 @@ export default function App() {
         fontFamily: "Arial",
       }}
     >
-      {!isFinished ? (
-        <div>
-          <h3 style={{ color: "#007BFF" }}>Kuis Trivia Online 🌍</h3>
-          <h4>
-            Soal {currentIndex + 1} dari {questions.length}
-          </h4>
+      <div>
+        <h3 style={{ color: "#007BFF" }}>Kuis Trivia Online 🌍</h3>
+        <h4>
+          Soal {currentIndex + 1} dari {questions.length}
+        </h4>
 
-          <h2>{questions[currentIndex].question}</h2>
+        <h2>{questions[currentIndex].question}</h2>
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              marginTop: "20px",
-            }}
-          >
-            {questions[currentIndex].answers.map((ans, index) => (
-              <button
-                key={index}
-                onClick={() => handleAnswerSelect(ans)}
-                style={{
-                  padding: "12px",
-                  fontSize: "16px",
-                  cursor: "pointer",
-                  backgroundColor:
-                    selectedAnswer === ans ? "#4CAF50" : "#f9f9f9",
-                  color: selectedAnswer === ans ? "white" : "black",
-                  border: "1px solid #ccc",
-                  borderRadius: "5px",
-                  textAlign: "left",
-                }}
-              >
-                {ans}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={handleNextQuestion}
-            disabled={!selectedAnswer}
-            style={{
-              marginTop: "20px",
-              padding: "10px 20px",
-              fontSize: "16px",
-              backgroundColor: selectedAnswer ? "#007BFF" : "#cccccc",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: selectedAnswer ? "pointer" : "not-allowed",
-            }}
-          >
-            {currentIndex === questions.length - 1
-              ? "Selesai"
-              : "Soal Berikutnya"}
-          </button>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            marginTop: "20px",
+          }}
+        >
+          {questions[currentIndex].answers.map((ans, index) => (
+            <button
+              key={index}
+              onClick={() => handleAnswerSelect(ans)}
+              style={{
+                padding: "12px",
+                fontSize: "16px",
+                cursor: "pointer",
+                backgroundColor: selectedAnswer === ans ? "#4CAF50" : "#f9f9f9",
+                color: selectedAnswer === ans ? "white" : "black",
+                border: "1px solid #ccc",
+                borderRadius: "5px",
+                textAlign: "left",
+              }}
+            >
+              {ans}
+            </button>
+          ))}
         </div>
-      ) : (
-        <div style={{ textAlign: "center" }}>
-          <h2>Kuis Selesai! 🎉</h2>
-          <p style={{ fontSize: "18px" }}>Skor kamu:</p>
-          <h1 style={{ color: "#4CAF50" }}>
-            {score} / {questions.length}
-          </h1>
-          <button
-            onClick={handleRestart}
-            style={{
-              marginTop: "20px",
-              padding: "10px 20px",
-              fontSize: "16px",
-              backgroundColor: "#007BFF",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer",
-            }}
-          >
-            Main Lagi
-          </button>
-        </div>
-      )}
+
+        <button
+          onClick={handleNextQuestion}
+          disabled={!selectedAnswer}
+          style={{
+            marginTop: "20px",
+            padding: "10px 20px",
+            fontSize: "16px",
+            backgroundColor: selectedAnswer ? "#007BFF" : "#cccccc",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+          }}
+        >
+          {currentIndex === questions.length - 1
+            ? "Selesai"
+            : "Soal Berikutnya"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ResultScreen() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const { score = 0, total = 5 } = location.state || {};
+
+  const handleRestart = () => {
+    navigate("/");
+  };
+
+  return (
+    <div
+      className="quiz-container"
+      style={{
+        maxWidth: "600px",
+        margin: "40px auto",
+        padding: "20px",
+        fontFamily: "Arial",
+        textAlign: "center",
+      }}
+    >
+      <h2>Kuis Selesai! 🎉</h2>
+      <p style={{ fontSize: "18px" }}>Skor kamu:</p>
+      <h1 style={{ color: "#4CAF50" }}>
+        {score} / {total}
+      </h1>
+      <button
+        onClick={handleRestart}
+        style={{
+          marginTop: "20px",
+          padding: "10px 20px",
+          fontSize: "16px",
+          backgroundColor: "#007BFF",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer",
+        }}
+      >
+        Main Lagi
+      </button>
     </div>
   );
 }
