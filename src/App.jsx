@@ -39,9 +39,19 @@ function QuizScreen() {
     const fetchTriviaQuestions = async () => {
       try {
         setLoading(true);
+        setErrorMessage("");
         const response = await fetch(
-          "https://opentdb.com/api.php?amount=5&type=multiple",
+          "https://api.allorigins.win/raw?url=" +
+            encodeURIComponent(
+              "https://opentdb.com/api.php?amount=5&type=multiple",
+            ),
         );
+
+        if (response.status === 429) {
+          throw new Error(
+            "Terlalu banyak permintaan ke server (429). Silakan tunggu sebentar lalu klik Coba Lagi.",
+          );
+        }
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -64,15 +74,16 @@ function QuizScreen() {
           });
 
           setQuestions(formattedQuestions);
-          setLoading(false);
         } else {
           throw new Error("Data soal kosong dari API.");
         }
       } catch (error) {
         console.error("Detail Error Fetch:", error);
         setErrorMessage(
-          "Gagal memuat soal dari Trivia DB. Periksa koneksi internet atau jaringanmu.",
+          error.message ||
+            "Gagal memuat soal dari Trivia DB. Periksa koneksi internet atau jaringanmu.",
         );
+      } finally {
         setLoading(false);
       }
     };
