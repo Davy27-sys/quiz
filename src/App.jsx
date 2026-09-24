@@ -81,7 +81,7 @@ function QuizScreen() {
         console.error("Detail Error Fetch:", error);
         setErrorMessage(
           error.message ||
-            "Gagal memuat soal dari Trivia DB. Periksa koneksi internet atau jaringanmu.",
+            "Gagal memuat soal dari Trivia DB. Periksa koneksi internet.",
         );
       } finally {
         setLoading(false);
@@ -90,10 +90,6 @@ function QuizScreen() {
 
     fetchTriviaQuestions();
   }, []);
-
-  const handleAnswerSelect = (answer) => {
-    setSelectedAnswer(answer);
-  };
 
   const handleNextQuestion = () => {
     let updatedScore = score;
@@ -107,7 +103,6 @@ function QuizScreen() {
     if (nextIndex < questions.length) {
       setCurrentIndex(nextIndex);
     } else {
-      // Mengirim data score dan total melalui state router
       navigate("/result", {
         state: { score: updatedScore, total: questions.length },
       });
@@ -115,105 +110,57 @@ function QuizScreen() {
   };
 
   if (loading) {
-    return (
-      <div
-        style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
-      >
-        <h2>Memuat soal dari Trivia DB... ⏳</h2>
-      </div>
-    );
+    return <LoadingView message="Memuat soal dari Trivia DB... ⏳" />;
   }
 
   if (errorMessage) {
     return (
-      <div
-        style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
-      >
-        <h2 style={{ color: "red", padding: "0 20px" }}>{errorMessage}</h2>
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            marginTop: "15px",
-            padding: "10px 20px",
-            fontSize: "16px",
-            backgroundColor: "#007BFF",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
-        >
-          Coba Lagi
-        </button>
-      </div>
+      <ErrorView
+        message={errorMessage}
+        onRetry={() => window.location.reload()}
+      />
     );
   }
 
+  const currentQ = questions[currentIndex];
+
   return (
-    <div
-      className="quiz-container"
-      style={{
-        maxWidth: "600px",
-        margin: "40px auto",
-        padding: "20px",
-        fontFamily: "Arial",
-      }}
-    >
-      <div>
-        <h3 style={{ color: "#007BFF" }}>Kuis Trivia Online 🌍</h3>
-        <h4>
-          Soal {currentIndex + 1} dari {questions.length}
-        </h4>
+    <div className="quiz-container" style={containerStyle}>
+      <h3 style={{ color: "#007BFF" }}>Kuis Trivia Online 🌍</h3>
+      <h4>
+        Soal {currentIndex + 1} dari {questions.length}
+      </h4>
+      <h2>{currentQ.question}</h2>
 
-        <h2>{questions[currentIndex].question}</h2>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            marginTop: "20px",
-          }}
-        >
-          {questions[currentIndex].answers.map((ans, index) => (
-            <button
-              key={index}
-              onClick={() => handleAnswerSelect(ans)}
-              style={{
-                padding: "12px",
-                fontSize: "16px",
-                cursor: "pointer",
-                backgroundColor: selectedAnswer === ans ? "#4CAF50" : "#f9f9f9",
-                color: selectedAnswer === ans ? "white" : "black",
-                border: "1px solid #ccc",
-                borderRadius: "5px",
-                textAlign: "left",
-              }}
-            >
-              {ans}
-            </button>
-          ))}
-        </div>
-
-        <button
-          onClick={handleNextQuestion}
-          disabled={!selectedAnswer}
-          style={{
-            marginTop: "20px",
-            padding: "10px 20px",
-            fontSize: "16px",
-            backgroundColor: selectedAnswer ? "#007BFF" : "#cccccc",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
-        >
-          {currentIndex === questions.length - 1
-            ? "Selesai"
-            : "Soal Berikutnya"}
-        </button>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          marginTop: "20px",
+        }}
+      >
+        {currentQ.answers.map((ans, index) => (
+          <AnswerButton
+            key={index}
+            answer={ans}
+            isSelected={selectedAnswer === ans}
+            onClick={() => setSelectedAnswer(ans)}
+          />
+        ))}
       </div>
+
+      <button
+        onClick={handleNextQuestion}
+        disabled={!selectedAnswer}
+        style={{
+          ...buttonStyle,
+          backgroundColor: selectedAnswer ? "#007BFF" : "#cccccc",
+          cursor: selectedAnswer ? "pointer" : "not-allowed",
+        }}
+      >
+        {currentIndex === questions.length - 1 ? "Selesai" : "Soal Berikutnya"}
+      </button>
     </div>
   );
 }
@@ -221,7 +168,6 @@ function QuizScreen() {
 function ResultScreen() {
   const location = useLocation();
   const navigate = useNavigate();
-
   const quizData = location.state;
 
   useEffect(() => {
@@ -231,52 +177,85 @@ function ResultScreen() {
   }, [quizData, navigate]);
 
   if (!quizData) {
-    return (
-      <div
-        style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
-      >
-        <h2>Akses ditolak. Mengarahkan kembali ke kuis... 🔄</h2>
-      </div>
-    );
+    return <LoadingView message="Akses ditolak. Mengarahkan kembali... 🔄" />;
   }
 
   const { score, total } = quizData;
 
-  const handleRestart = () => {
-    navigate("/");
-  };
-
   return (
     <div
       className="quiz-container"
-      style={{
-        maxWidth: "600px",
-        margin: "40px auto",
-        padding: "20px",
-        fontFamily: "Arial",
-        textAlign: "center",
-      }}
+      style={{ ...containerStyle, textAlign: "center" }}
     >
       <h2>Kuis Selesai! 🎉</h2>
       <p style={{ fontSize: "18px" }}>Skor kamu:</p>
       <h1 style={{ color: "#4CAF50" }}>
         {score} / {total}
       </h1>
-      <button
-        onClick={handleRestart}
-        style={{
-          marginTop: "20px",
-          padding: "10px 20px",
-          fontSize: "16px",
-          backgroundColor: "#007BFF",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-          cursor: "pointer",
-        }}
-      >
+      <button onClick={() => navigate("/")} style={buttonStyle}>
         Main Lagi
       </button>
     </div>
   );
 }
+
+function AnswerButton({ answer, isSelected, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "12px",
+        fontSize: "16px",
+        cursor: "pointer",
+        backgroundColor: isSelected ? "#4CAF50" : "#f9f9f9",
+        color: isSelected ? "white" : "black",
+        border: "1px solid #ccc",
+        borderRadius: "5px",
+        textAlign: "left",
+      }}
+    >
+      {answer}
+    </button>
+  );
+}
+
+function LoadingView({ message }) {
+  return (
+    <div
+      style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
+    >
+      <h2>{message}</h2>
+    </div>
+  );
+}
+
+function ErrorView({ message, onRetry }) {
+  return (
+    <div
+      style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
+    >
+      <h2 style={{ color: "red", padding: "0 20px" }}>{message}</h2>
+      <button onClick={onRetry} style={buttonStyle}>
+        Coba Lagi
+      </button>
+    </div>
+  );
+}
+
+const containerStyle = {
+  maxWidth: "600px",
+  margin: "40px auto",
+  padding: "20px",
+  fontFamily: "Arial",
+};
+
+const buttonStyle = {
+  marginTop: "20px",
+  padding: "10px 20px",
+  fontSize: "16px",
+  backgroundColor: "#007BFF",
+  color: "white",
+  border: "none",
+  borderRadius: "5px",
+  cursor: "pointer",
+};
