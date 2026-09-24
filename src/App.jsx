@@ -107,6 +107,7 @@ function QuizScreen() {
     if (nextIndex < questions.length) {
       setCurrentIndex(nextIndex);
     } else {
+      // Mengirim data score dan total melalui state router
       navigate("/result", {
         state: { score: updatedScore, total: questions.length },
       });
@@ -221,7 +222,25 @@ function ResultScreen() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { score = 0, total = 5 } = location.state || {};
+  const quizData = location.state;
+
+  useEffect(() => {
+    if (!quizData) {
+      navigate("/");
+    }
+  }, [quizData, navigate]);
+
+  if (!quizData) {
+    return (
+      <div
+        style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
+      >
+        <h2>Akses ditolak. Mengarahkan kembali ke kuis... 🔄</h2>
+      </div>
+    );
+  }
+
+  const { score, total } = quizData;
 
   const handleRestart = () => {
     navigate("/");
