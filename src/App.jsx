@@ -32,62 +32,99 @@ function QuizScreen() {
   const [selectedAnswer, setSelectedAnswer] = useState("");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [cooldown, setCooldown] = useState(0);
 
   const navigate = useNavigate();
 
+  // Cooldown timer untuk tombol Coba Lagi jika terkena 429
   useEffect(() => {
-    const fetchTriviaQuestions = async () => {
-      try {
-        setLoading(true);
-        setErrorMessage("");
-        const response = await fetch(
-          "https://api.allorigins.win/raw?url=" +
-            encodeURIComponent(
-              "https://opentdb.com/api.php?amount=5&type=multiple",
-            ),
+    let timer;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const fetchTriviaQuestions = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage("");
+
+      // 1. Ambil atau buat token sesi OpenTDB agar terhindar dari rate limit ketat IP
+      let token = localStorage.getItem("opentdb_token");
+      if (!token) {
+        const tokenRes = await fetch(
+          "https://opentdb.com/api_token.php?command=request",
         );
-
-        if (response.status === 429) {
-          throw new Error(
-            "Terlalu banyak permintaan ke server (429). Silakan tunggu sebentar lalu klik Coba Lagi.",
-          );
+        const tokenData = await tokenRes.json();
+        if (tokenData.response_code === 0) {
+          token = tokenData.token;
+          localStorage.setItem("opentdb_token", token);
         }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.results && data.results.length > 0) {
-          const formattedQuestions = data.results.map((item) => {
-            const allAnswers = [...item.incorrect_answers, item.correct_answer];
-            const shuffledAnswers = allAnswers
-              .map((ans) => decodeHTML(ans))
-              .sort(() => Math.random() - 0.5);
-
-            return {
-              question: decodeHTML(item.question),
-              answers: shuffledAnswers,
-              correctAnswer: decodeHTML(item.correct_answer),
-            };
-          });
-
-          setQuestions(formattedQuestions);
-        } else {
-          throw new Error("Data soal kosong dari API.");
-        }
-      } catch (error) {
-        console.error("Detail Error Fetch:", error);
-        setErrorMessage(
-          error.message ||
-            "Gagal memuat soal dari Trivia DB. Periksa koneksi internet.",
-        );
-      } finally {
-        setLoading(false);
       }
-    };
 
+      // 2. Fetch soal dengan menyertakan token sesi
+      let apiUrl = "https://opentdb.com/api.php?amount=5&type=multiple";
+      if (token) {
+        apiUrl += `&token=${token}`;
+      }
+
+      const response = await fetch(apiUrl);
+
+      // Jika terkena rate limit (429)
+      if (response.status === 429) {
+        setCooldown(10); // Kunci tombol selama 10 detik
+        throw new Error(
+          "Terlalu banyak permintaan ke server (429). Silakan tunggu sebentar lalu klik Coba Lagi.",
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Jika token habis/expired (code 3 atau 4), reset token lalu ambil ulang
+      if (data.response_code === 3 || data.response_code === 4) {
+        localStorage.removeItem("opentdb_token");
+        setLoading(false);
+        fetchTriviaQuestions(); // Coba ambil lagi secara rekursif
+        return;
+      }
+
+      if (data.results && data.results.length > 0) {
+        const formattedQuestions = data.results.map((item) => {
+          const allAnswers = [...item.incorrect_answers, item.correct_answer];
+          const shuffledAnswers = allAnswers
+            .map((ans) => decodeHTML(ans))
+            .sort(() => Math.random() - 0.5);
+
+          return {
+            question: decodeHTML(item.question),
+            answers: shuffledAnswers,
+            correctAnswer: decodeHTML(item.correct_answer),
+          };
+        });
+
+        setQuestions(formattedQuestions);
+      } else {
+        throw new Error("Data soal kosong dari API.");
+      }
+    } catch (error) {
+      console.error("Detail Error Fetch:", error);
+      setErrorMessage(
+        error.message ||
+          "Gagal memuat soal dari Trivia DB. Periksa koneksi internet.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchTriviaQuestions();
   }, []);
 
@@ -115,10 +152,22 @@ function QuizScreen() {
 
   if (errorMessage) {
     return (
-      <ErrorView
-        message={errorMessage}
-        onRetry={() => window.location.reload()}
-      />
+      <div
+        style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
+      >
+        <h2 style={{ color: "red", padding: "0 20px" }}>{errorMessage}</h2>
+        <button
+          onClick={fetchTriviaQuestions}
+          disabled={cooldown > 0}
+          style={{
+            ...buttonStyle,
+            backgroundColor: cooldown > 0 ? "#cccccc" : "#007BFF",
+            cursor: cooldown > 0 ? "not-allowed" : "pointer",
+          }}
+        >
+          {cooldown > 0 ? `Tunggu (${cooldown}s)...` : "Coba Lagi"}
+        </button>
+      </div>
     );
   }
 
@@ -225,19 +274,6 @@ function LoadingView({ message }) {
       style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
     >
       <h2>{message}</h2>
-    </div>
-  );
-}
-
-function ErrorView({ message, onRetry }) {
-  return (
-    <div
-      style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
-    >
-      <h2 style={{ color: "red", padding: "0 20px" }}>{message}</h2>
-      <button onClick={onRetry} style={buttonStyle}>
-        Coba Lagi
-      </button>
     </div>
   );
 }
