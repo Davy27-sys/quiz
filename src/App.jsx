@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  useNavigate,
-  useLocation,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import LoadingView from "./components/LoadingView";
+import ErrorView from "./components/ErrorView";
+import QuizScreen from "./components/QuizScreen";
+import ResultScreen from "./components/ResultScreen";
 import "./App.css";
 
 const decodeHTML = (html) => {
@@ -18,14 +16,22 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<QuizScreen />} />
-        <Route path="/result" element={<ResultScreen />} />
+        <Route path="/" element={<MainQuizWrapper />} />
+        <Route
+          path="/result"
+          element={
+            <ResultScreen
+              containerStyle={containerStyle}
+              buttonStyle={buttonStyle}
+            />
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
 }
 
-function QuizScreen() {
+function MainQuizWrapper() {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -36,7 +42,6 @@ function QuizScreen() {
 
   const navigate = useNavigate();
 
-  // Cooldown timer untuk tombol Coba Lagi jika terkena 429
   useEffect(() => {
     let timer;
     if (cooldown > 0) {
@@ -52,7 +57,6 @@ function QuizScreen() {
       setLoading(true);
       setErrorMessage("");
 
-      // 1. Ambil atau buat token sesi OpenTDB agar terhindar dari rate limit ketat IP
       let token = localStorage.getItem("opentdb_token");
       if (!token) {
         const tokenRes = await fetch(
@@ -65,7 +69,6 @@ function QuizScreen() {
         }
       }
 
-      // 2. Fetch soal dengan menyertakan token sesi
       let apiUrl = "https://opentdb.com/api.php?amount=5&type=multiple";
       if (token) {
         apiUrl += `&token=${token}`;
@@ -73,9 +76,8 @@ function QuizScreen() {
 
       const response = await fetch(apiUrl);
 
-      // Jika terkena rate limit (429)
       if (response.status === 429) {
-        setCooldown(10); // Kunci tombol selama 10 detik
+        setCooldown(10);
         throw new Error(
           "Terlalu banyak permintaan ke server (429). Silakan tunggu sebentar lalu klik Coba Lagi.",
         );
@@ -87,11 +89,10 @@ function QuizScreen() {
 
       const data = await response.json();
 
-      // Jika token habis/expired (code 3 atau 4), reset token lalu ambil ulang
       if (data.response_code === 3 || data.response_code === 4) {
         localStorage.removeItem("opentdb_token");
         setLoading(false);
-        fetchTriviaQuestions(); // Coba ambil lagi secara rekursif
+        fetchTriviaQuestions();
         return;
       }
 
@@ -152,129 +153,25 @@ function QuizScreen() {
 
   if (errorMessage) {
     return (
-      <div
-        style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
-      >
-        <h2 style={{ color: "red", padding: "0 20px" }}>{errorMessage}</h2>
-        <button
-          onClick={fetchTriviaQuestions}
-          disabled={cooldown > 0}
-          style={{
-            ...buttonStyle,
-            backgroundColor: cooldown > 0 ? "#cccccc" : "#007BFF",
-            cursor: cooldown > 0 ? "not-allowed" : "pointer",
-          }}
-        >
-          {cooldown > 0 ? `Tunggu (${cooldown}s)...` : "Coba Lagi"}
-        </button>
-      </div>
+      <ErrorView
+        errorMessage={errorMessage}
+        cooldown={cooldown}
+        onRetry={fetchTriviaQuestions}
+        buttonStyle={buttonStyle}
+      />
     );
   }
 
-  const currentQ = questions[currentIndex];
-
   return (
-    <div className="quiz-container" style={containerStyle}>
-      <h3 style={{ color: "#007BFF" }}>Kuis Trivia Online 🌍</h3>
-      <h4>
-        Soal {currentIndex + 1} dari {questions.length}
-      </h4>
-      <h2>{currentQ.question}</h2>
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          marginTop: "20px",
-        }}
-      >
-        {currentQ.answers.map((ans, index) => (
-          <AnswerButton
-            key={index}
-            answer={ans}
-            isSelected={selectedAnswer === ans}
-            onClick={() => setSelectedAnswer(ans)}
-          />
-        ))}
-      </div>
-
-      <button
-        onClick={handleNextQuestion}
-        disabled={!selectedAnswer}
-        style={{
-          ...buttonStyle,
-          backgroundColor: selectedAnswer ? "#007BFF" : "#cccccc",
-          cursor: selectedAnswer ? "pointer" : "not-allowed",
-        }}
-      >
-        {currentIndex === questions.length - 1 ? "Selesai" : "Soal Berikutnya"}
-      </button>
-    </div>
-  );
-}
-
-function ResultScreen() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const quizData = location.state;
-
-  useEffect(() => {
-    if (!quizData) {
-      navigate("/");
-    }
-  }, [quizData, navigate]);
-
-  if (!quizData) {
-    return <LoadingView message="Akses ditolak. Mengarahkan kembali... 🔄" />;
-  }
-
-  const { score, total } = quizData;
-
-  return (
-    <div
-      className="quiz-container"
-      style={{ ...containerStyle, textAlign: "center" }}
-    >
-      <h2>Kuis Selesai! 🎉</h2>
-      <p style={{ fontSize: "18px" }}>Skor kamu:</p>
-      <h1 style={{ color: "#4CAF50" }}>
-        {score} / {total}
-      </h1>
-      <button onClick={() => navigate("/")} style={buttonStyle}>
-        Main Lagi
-      </button>
-    </div>
-  );
-}
-
-function AnswerButton({ answer, isSelected, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "12px",
-        fontSize: "16px",
-        cursor: "pointer",
-        backgroundColor: isSelected ? "#4CAF50" : "#f9f9f9",
-        color: isSelected ? "white" : "black",
-        border: "1px solid #ccc",
-        borderRadius: "5px",
-        textAlign: "left",
-      }}
-    >
-      {answer}
-    </button>
-  );
-}
-
-function LoadingView({ message }) {
-  return (
-    <div
-      style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
-    >
-      <h2>{message}</h2>
-    </div>
+    <QuizScreen
+      questions={questions}
+      currentIndex={currentIndex}
+      selectedAnswer={selectedAnswer}
+      setSelectedAnswer={setSelectedAnswer}
+      handleNextQuestion={handleNextQuestion}
+      containerStyle={containerStyle}
+      buttonStyle={buttonStyle}
+    />
   );
 }
 
