@@ -32,15 +32,39 @@ export default function App() {
 }
 
 function MainQuizWrapper() {
-  const [questions, setQuestions] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [score, setScore] = useState(0);
+  const [questions, setQuestions] = useState(() => {
+    const saved = sessionStorage.getItem("quiz_questions");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const saved = sessionStorage.getItem("quiz_currentIndex");
+    return saved ? JSON.parse(saved) : 0;
+  });
+
+  const [score, setScore] = useState(() => {
+    const saved = sessionStorage.getItem("quiz_score");
+    return saved ? JSON.parse(saved) : 0;
+  });
+
   const [selectedAnswer, setSelectedAnswer] = useState("");
-  const [loading, setLoading] = useState(true);
+
+  const [loading, setLoading] = useState(() => {
+    const savedQuestions = sessionStorage.getItem("quiz_questions");
+    return !savedQuestions;
+  });
+
   const [errorMessage, setErrorMessage] = useState("");
   const [cooldown, setCooldown] = useState(0);
 
   const navigate = useNavigate();
+  useEffect(() => {
+    if (questions.length > 0) {
+      sessionStorage.setItem("quiz_questions", JSON.stringify(questions));
+      sessionStorage.setItem("quiz_currentIndex", JSON.stringify(currentIndex));
+      sessionStorage.setItem("quiz_score", JSON.stringify(score));
+    }
+  }, [questions, currentIndex, score]);
 
   useEffect(() => {
     let timer;
@@ -111,6 +135,8 @@ function MainQuizWrapper() {
         });
 
         setQuestions(formattedQuestions);
+        setCurrentIndex(0);
+        setScore(0);
       } else {
         throw new Error("Data soal kosong dari API.");
       }
@@ -126,7 +152,9 @@ function MainQuizWrapper() {
   };
 
   useEffect(() => {
-    fetchTriviaQuestions();
+    if (questions.length === 0) {
+      fetchTriviaQuestions();
+    }
   }, []);
 
   const handleNextQuestion = () => {
@@ -141,6 +169,10 @@ function MainQuizWrapper() {
     if (nextIndex < questions.length) {
       setCurrentIndex(nextIndex);
     } else {
+      sessionStorage.removeItem("quiz_questions");
+      sessionStorage.removeItem("quiz_currentIndex");
+      sessionStorage.removeItem("quiz_score");
+
       navigate("/result", {
         state: { score: updatedScore, total: questions.length },
       });
