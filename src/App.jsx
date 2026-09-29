@@ -4,6 +4,7 @@ import LoadingView from "./components/LoadingView";
 import ErrorView from "./components/ErrorView";
 import QuizScreen from "./components/QuizScreen";
 import ResultScreen from "./components/ResultScreen";
+import LeaderboardScreen from "./components/LeaderboardScreen";
 import "./App.css";
 
 const decodeHTML = (html) => {
@@ -201,6 +202,15 @@ function MainQuizWrapper() {
       selectedAnswer={selectedAnswer}
       setSelectedAnswer={setSelectedAnswer}
       handleNextQuestion={handleNextQuestion}
+      containerStyle={containerStyle}
+      buttonStyle={buttonStyle}
+    />
+  );
+
+  return (
+    <LeaderboardScreen
+      scores={scoresList}
+      handleRestartQuiz={handleRestartQuiz}
       containerStyle={containerStyle}
       buttonStyle={buttonStyle}
     />
