@@ -1,25 +1,55 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-function Leaderboard({ scores }) {
-  const sortedScores = [...scores].sort((a, b) => b.score - a.score);
+function LeaderboardScreen({ scores, containerStyle, buttonStyle }) {
+  const navigate = useNavigate();
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    const savedScores =
+      scores && scores.length > 0
+        ? scores
+        : JSON.parse(localStorage.getItem("quizHistory")) || [];
+
+    const sortedScores = savedScores.sort((a, b) => b.score - a.score);
+    setHistory(sortedScores);
+  }, [scores]);
+
+  const handleRestartQuiz = () => {
+    sessionStorage.removeItem("quiz_questions");
+    sessionStorage.removeItem("quiz_currentIndex");
+    sessionStorage.removeItem("quiz_score");
+
+    navigate("/");
+  };
 
   return (
-    <div className="leaderboard-container">
-      <h2>Papan Peringkat Kuis</h2>
-      {sortedScores.length === 0 ? (
-        <p>Belum ada skor yang tercatat.</p>
+    <div style={containerStyle} className="quiz-container">
+      <h2>Papan Peringkat (Leaderboard)</h2>
+
+      {history.length === 0 ? (
+        <p>Belum ada riwayat skor yang tersimpan.</p>
       ) : (
-        <ol>
-          {sortedScores.map((player, index) => (
-            <li key={index} className="leaderboard-item">
-              <span className="player-name">{player.name}</span>
-              <span className="player-score">{player.score} poin</span>
+        <ol style={{ paddingLeft: "20px", textAlign: "left" }}>
+          {history.map((item, index) => (
+            <li key={index} style={{ marginBottom: "10px" }}>
+              <strong>{item.name}</strong> - {item.score} Poin
+              <br />
+              <small style={{ color: "#888" }}>{item.date}</small>
             </li>
           ))}
         </ol>
       )}
+
+      <button
+        style={buttonStyle}
+        className="quiz-button"
+        onClick={handleRestartQuiz}
+      >
+        Kembali ke Kuis
+      </button>
     </div>
   );
 }
 
-export default Leaderboard;
+export default LeaderboardScreen;

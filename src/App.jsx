@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useNavigate,
+  Link,
+} from "react-router-dom";
 import LoadingView from "./components/LoadingView";
 import ErrorView from "./components/ErrorView";
 import QuizScreen from "./components/QuizScreen";
@@ -22,6 +28,15 @@ export default function App() {
           path="/result"
           element={
             <ResultScreen
+              containerStyle={containerStyle}
+              buttonStyle={buttonStyle}
+            />
+          }
+        />
+        <Route
+          path="/leaderboard"
+          element={
+            <LeaderboardWrapper
               containerStyle={containerStyle}
               buttonStyle={buttonStyle}
             />
@@ -59,6 +74,7 @@ function MainQuizWrapper() {
   const [cooldown, setCooldown] = useState(0);
 
   const navigate = useNavigate();
+
   useEffect(() => {
     if (questions.length > 0) {
       sessionStorage.setItem("quiz_questions", JSON.stringify(questions));
@@ -167,16 +183,38 @@ function MainQuizWrapper() {
 
     setSelectedAnswer("");
     const nextIndex = currentIndex + 1;
+
     if (nextIndex < questions.length) {
       setCurrentIndex(nextIndex);
     } else {
+      const playerName =
+        prompt("Kuis selesai! Masukkan nama kamu untuk Leaderboard:") ||
+        "Pemain Anonim";
+
+      const newEntry = {
+        name: playerName,
+        score: updatedScore,
+        date: new Date().toLocaleDateString(),
+      };
+
+      try {
+        const existingScores =
+          JSON.parse(localStorage.getItem("quizHistory")) || [];
+        const updatedScores = [...existingScores, newEntry];
+        localStorage.setItem("quizHistory", JSON.stringify(updatedScores));
+      } catch (error) {
+        console.error("Gagal menyimpan ke localStorage:", error);
+      }
+
       sessionStorage.removeItem("quiz_questions");
       sessionStorage.removeItem("quiz_currentIndex");
       sessionStorage.removeItem("quiz_score");
 
-      navigate("/result", {
-        state: { score: updatedScore, total: questions.length },
-      });
+      setTimeout(() => {
+        navigate("/result", {
+          state: { score: updatedScore, total: questions.length },
+        });
+      }, 100);
     }
   };
 
@@ -196,16 +234,45 @@ function MainQuizWrapper() {
   }
 
   return (
-    <QuizScreen
-      questions={questions}
-      currentIndex={currentIndex}
-      selectedAnswer={selectedAnswer}
-      setSelectedAnswer={setSelectedAnswer}
-      handleNextQuestion={handleNextQuestion}
-      containerStyle={containerStyle}
-      buttonStyle={buttonStyle}
-    />
+    <div style={containerStyle}>
+      <QuizScreen
+        questions={questions}
+        currentIndex={currentIndex}
+        selectedAnswer={selectedAnswer}
+        setSelectedAnswer={setSelectedAnswer}
+        handleNextQuestion={handleNextQuestion}
+        containerStyle={{}}
+        buttonStyle={buttonStyle}
+      />
+
+      <Link to="/leaderboard">
+        <button
+          style={{ ...buttonStyle, backgroundColor: "#10b981", width: "100%" }}
+        >
+          Lihat Papan Peringkat (Leaderboard)
+        </button>
+      </Link>
+    </div>
   );
+}
+
+function LeaderboardWrapper({ containerStyle, buttonStyle }) {
+  const navigate = useNavigate();
+  const [scoresList, setScoresList] = useState([]);
+
+  useEffect(() => {
+    const savedScores = JSON.parse(localStorage.getItem("quizHistory")) || [];
+    const sorted = savedScores.sort((a, b) => b.score - a.score);
+    setScoresList(sorted);
+  }, []);
+
+  const handleRestartQuiz = () => {
+    sessionStorage.removeItem("quiz_questions");
+    sessionStorage.removeItem("quiz_currentIndex");
+    sessionStorage.removeItem("quiz_score");
+
+    navigate("/");
+  };
 
   return (
     <LeaderboardScreen
@@ -222,6 +289,9 @@ const containerStyle = {
   margin: "40px auto",
   padding: "20px",
   fontFamily: "Arial",
+  background: "#ffffff",
+  borderRadius: "12px",
+  boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
 };
 
 const buttonStyle = {
