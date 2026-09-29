@@ -1,50 +1,148 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import LoadingView from "./LoadingView";
 
 export default function ResultScreen({ containerStyle, buttonStyle }) {
   const location = useLocation();
   const navigate = useNavigate();
+
   const quizData = location.state;
+
+  const [playerName, setPlayerName] = useState("");
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (!quizData) {
-      navigate("/");
+      navigate("/", { replace: true });
     }
   }, [quizData, navigate]);
 
   if (!quizData) {
-    return <LoadingView message="Akses ditolak. Mengarahkan kembali... 🔄" />;
+    return null;
   }
 
   const { score, total } = quizData;
 
+  const handleSave = (event) => {
+    event.preventDefault();
+
+    const name = playerName.trim() || "Pemain Anonim";
+
+    const newEntry = {
+      name: name,
+      score: score,
+      total: total,
+      date: new Date().toLocaleDateString("id-ID"),
+    };
+
+    try {
+      const savedData = localStorage.getItem("quizHistory");
+
+      const history = savedData ? JSON.parse(savedData) : [];
+
+      const validHistory = Array.isArray(history) ? history : [];
+
+      const updatedHistory = [...validHistory, newEntry];
+
+      localStorage.setItem("quizHistory", JSON.stringify(updatedHistory));
+
+      setSaved(true);
+
+      // Setelah tersimpan, masuk leaderboard
+      navigate("/leaderboard");
+    } catch (error) {
+      console.error("Gagal menyimpan leaderboard:", error);
+
+      alert("Gagal menyimpan skor.");
+    }
+  };
+
   return (
     <div
       className="quiz-container"
-      style={{ ...containerStyle, textAlign: "center" }}
+      style={{
+        ...containerStyle,
+        textAlign: "center",
+      }}
     >
       <h2>Kuis Selesai! 🎉</h2>
+
       <p style={{ fontSize: "18px" }}>Skor kamu:</p>
-      <h1 style={{ color: "#4CAF50" }}>
+
+      <h1
+        style={{
+          color: "#4CAF50",
+          fontSize: "42px",
+          margin: "10px 0 25px",
+        }}
+      >
         {score} / {total}
       </h1>
 
-      {/* Tombol untuk mengulang kuis */}
-      <button onClick={() => navigate("/")} style={buttonStyle}>
-        Main Lagi
-      </button>
+      {!saved ? (
+        <form
+          onSubmit={handleSave}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px",
+          }}
+        >
+          <label
+            style={{
+              textAlign: "left",
+              fontWeight: "bold",
+            }}
+          >
+            Masukkan nama kamu:
+          </label>
 
-      {/* Tombol baru untuk melihat Papan Peringkat */}
+          <input
+            type="text"
+            value={playerName}
+            onChange={(event) => setPlayerName(event.target.value)}
+            placeholder="Contoh: Davy"
+            maxLength={30}
+            style={{
+              padding: "12px",
+              fontSize: "16px",
+              border: "1px solid #ccc",
+              borderRadius: "5px",
+              outline: "none",
+            }}
+          />
+
+          <button
+            type="submit"
+            style={{
+              ...buttonStyle,
+              width: "100%",
+              backgroundColor: "#10b981",
+            }}
+          >
+            Simpan ke Leaderboard 🏆
+          </button>
+        </form>
+      ) : (
+        <p
+          style={{
+            color: "#10b981",
+            fontWeight: "bold",
+          }}
+        >
+          Skor berhasil disimpan!
+        </p>
+      )}
+
       <button
-        onClick={() => navigate("/leaderboard")}
+        type="button"
+        onClick={() => navigate("/")}
         style={{
           ...buttonStyle,
-          backgroundColor: "#10b981", // Warna hijau khas leaderboard
-          marginTop: "10px",
+          width: "100%",
+          backgroundColor: "#6c757d",
         }}
       >
-        Lihat Papan Peringkat
+        Main Lagi 🔄
       </button>
     </div>
   );

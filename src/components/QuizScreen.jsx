@@ -10,15 +10,21 @@ export default function QuizScreen({
   containerStyle,
   buttonStyle,
 }) {
-  const currentQ = questions[currentIndex];
+  if (!questions || questions.length === 0 || !questions[currentIndex]) {
+    return <div>Memuat soal...</div>;
+  }
+
+  const currentQuestion = questions[currentIndex];
 
   return (
     <div className="quiz-container" style={containerStyle}>
       <h3 style={{ color: "#007BFF" }}>Kuis Trivia Online 🌍</h3>
+
       <h4>
         Soal {currentIndex + 1} dari {questions.length}
       </h4>
-      <h2>{currentQ.question}</h2>
+
+      <h2>{currentQuestion.question}</h2>
 
       <div
         style={{
@@ -28,26 +34,30 @@ export default function QuizScreen({
           marginTop: "20px",
         }}
       >
-        {currentQ.answers.map((ans, index) => (
+        {currentQuestion.answers.map((answer, index) => (
           <AnswerButton
             key={index}
-            answer={ans}
-            isSelected={selectedAnswer === ans}
-            onClick={() => setSelectedAnswer(ans)}
+            answer={answer}
+            isSelected={selectedAnswer === answer}
+            onClick={() => setSelectedAnswer(answer)}
           />
         ))}
       </div>
 
       <button
+        type="button"
         onClick={handleNextQuestion}
         disabled={!selectedAnswer}
         style={{
           ...buttonStyle,
+          width: "100%",
           backgroundColor: selectedAnswer ? "#007BFF" : "#cccccc",
           cursor: selectedAnswer ? "pointer" : "not-allowed",
         }}
       >
-        {currentIndex === questions.length - 1 ? "Selesai" : "Soal Berikutnya"}
+        {currentIndex === questions.length - 1
+          ? "Selesai 🎉"
+          : "Soal Berikutnya →"}
       </button>
     </div>
   );

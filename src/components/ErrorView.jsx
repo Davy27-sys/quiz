@@ -8,10 +8,25 @@ export default function ErrorView({
 }) {
   return (
     <div
-      style={{ textAlign: "center", marginTop: "80px", fontFamily: "Arial" }}
+      style={{
+        textAlign: "center",
+        marginTop: "80px",
+        padding: "20px",
+        fontFamily: "Arial, sans-serif",
+      }}
     >
-      <h2 style={{ color: "red", padding: "0 20px" }}>{errorMessage}</h2>
+      <h2
+        style={{
+          color: "#dc2626",
+        }}
+      >
+        Gagal Memuat Kuis
+      </h2>
+
+      <p>{errorMessage}</p>
+
       <button
+        type="button"
         onClick={onRetry}
         disabled={cooldown > 0}
         style={{
@@ -20,7 +35,7 @@ export default function ErrorView({
           cursor: cooldown > 0 ? "not-allowed" : "pointer",
         }}
       >
-        {cooldown > 0 ? `Tunggu (${cooldown}s)...` : "Coba Lagi"}
+        {cooldown > 0 ? `Tunggu ${cooldown} detik...` : "Coba Lagi"}
       </button>
     </div>
   );

@@ -1,55 +1,85 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function LeaderboardScreen({ scores, containerStyle, buttonStyle }) {
+export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
   const navigate = useNavigate();
+
   const [history, setHistory] = useState([]);
 
-  useEffect(() => {
-    const savedScores =
-      scores && scores.length > 0
-        ? scores
-        : JSON.parse(localStorage.getItem("quizHistory")) || [];
+  const loadLeaderboard = () => {
+    try {
+      const saved = localStorage.getItem("quizHistory");
 
-    const sortedScores = savedScores.sort((a, b) => b.score - a.score);
-    setHistory(sortedScores);
-  }, [scores]);
+      if (!saved) {
+        setHistory([]);
+        return;
+      }
 
-  const handleRestartQuiz = () => {
-    sessionStorage.removeItem("quiz_questions");
-    sessionStorage.removeItem("quiz_currentIndex");
-    sessionStorage.removeItem("quiz_score");
+      const data = JSON.parse(saved);
 
-    navigate("/");
+      if (!Array.isArray(data)) {
+        setHistory([]);
+        return;
+      }
+
+      const sorted = [...data].sort((a, b) => b.score - a.score);
+
+      setHistory(sorted);
+    } catch (error) {
+      console.error("Gagal membaca leaderboard:", error);
+
+      setHistory([]);
+    }
   };
 
+  useEffect(() => {
+    loadLeaderboard();
+  }, []);
+
   return (
-    <div style={containerStyle} className="quiz-container">
-      <h2>Papan Peringkat (Leaderboard)</h2>
+    <div className="quiz-container" style={containerStyle}>
+      <h2 style={{ textAlign: "center" }}>🏆 Leaderboard</h2>
 
       {history.length === 0 ? (
-        <p>Belum ada riwayat skor yang tersimpan.</p>
+        <p style={{ textAlign: "center" }}>Belum ada skor.</p>
       ) : (
-        <ol style={{ paddingLeft: "20px", textAlign: "left" }}>
+        <ol style={{ paddingLeft: "25px" }}>
           {history.map((item, index) => (
-            <li key={index} style={{ marginBottom: "10px" }}>
-              <strong>{item.name}</strong> - {item.score} Poin
+            <li
+              key={index}
+              style={{
+                marginBottom: "15px",
+                padding: "10px",
+                background: "#f8f8f8",
+                borderRadius: "8px",
+              }}
+            >
+              <strong>{item.name}</strong>
+
               <br />
-              <small style={{ color: "#888" }}>{item.date}</small>
+
+              <span>
+                Skor: {item.score} / {item.total || 5}
+              </span>
+
+              <br />
+
+              <small style={{ color: "#777" }}>{item.date}</small>
             </li>
           ))}
         </ol>
       )}
 
       <button
-        style={buttonStyle}
-        className="quiz-button"
-        onClick={handleRestartQuiz}
+        type="button"
+        onClick={() => navigate("/")}
+        style={{
+          ...buttonStyle,
+          width: "100%",
+        }}
       >
         Kembali ke Kuis
       </button>
     </div>
   );
 }
-
-export default LeaderboardScreen;

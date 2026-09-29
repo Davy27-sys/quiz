@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -6,24 +6,48 @@ import {
   useNavigate,
   Link,
 } from "react-router-dom";
+
 import LoadingView from "./components/LoadingView";
 import ErrorView from "./components/ErrorView";
 import QuizScreen from "./components/QuizScreen";
 import ResultScreen from "./components/ResultScreen";
 import LeaderboardScreen from "./components/LeaderboardScreen";
+
 import "./App.css";
 
 const decodeHTML = (html) => {
-  const txt = document.createElement("textarea");
-  txt.innerHTML = html;
-  return txt.value;
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = html;
+  return textarea.value;
+};
+
+const containerStyle = {
+  maxWidth: "600px",
+  margin: "40px auto",
+  padding: "20px",
+  fontFamily: "Arial, sans-serif",
+  background: "#ffffff",
+  borderRadius: "12px",
+  boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+};
+
+const buttonStyle = {
+  marginTop: "20px",
+  padding: "10px 20px",
+  fontSize: "16px",
+  backgroundColor: "#007BFF",
+  color: "white",
+  border: "none",
+  borderRadius: "5px",
+  cursor: "pointer",
 };
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MainQuizWrapper />} />
+        <Route path="/" element={<MainQuiz />} />
+
         <Route
           path="/result"
           element={
@@ -33,10 +57,11 @@ export default function App() {
             />
           }
         />
+
         <Route
           path="/leaderboard"
           element={
-            <LeaderboardWrapper
+            <LeaderboardScreen
               containerStyle={containerStyle}
               buttonStyle={buttonStyle}
             />
@@ -47,185 +72,181 @@ export default function App() {
   );
 }
 
-function MainQuizWrapper() {
-  const [questions, setQuestions] = useState(() => {
-    const saved = sessionStorage.getItem("quiz_questions");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [currentIndex, setCurrentIndex] = useState(() => {
-    const saved = sessionStorage.getItem("quiz_currentIndex");
-    return saved ? JSON.parse(saved) : 0;
-  });
-
-  const [score, setScore] = useState(() => {
-    const saved = sessionStorage.getItem("quiz_score");
-    return saved ? JSON.parse(saved) : 0;
-  });
-
+function MainQuiz() {
+  const [questions, setQuestions] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [score, setScore] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState("");
 
-  const [loading, setLoading] = useState(() => {
-    const savedQuestions = sessionStorage.getItem("quiz_questions");
-    return !savedQuestions;
-  });
-
+  const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [cooldown, setCooldown] = useState(0);
 
   const navigate = useNavigate();
 
+  // Countdown error 429
   useEffect(() => {
-    if (questions.length > 0) {
-      sessionStorage.setItem("quiz_questions", JSON.stringify(questions));
-      sessionStorage.setItem("quiz_currentIndex", JSON.stringify(currentIndex));
-      sessionStorage.setItem("quiz_score", JSON.stringify(score));
-    }
-  }, [questions, currentIndex, score]);
+    if (cooldown <= 0) return;
 
-  useEffect(() => {
-    let timer;
-    if (cooldown > 0) {
-      timer = setInterval(() => {
-        setCooldown((prev) => prev - 1);
-      }, 1000);
-    }
+    const timer = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
     return () => clearInterval(timer);
   }, [cooldown]);
 
+  // Ambil soal dari API
   const fetchTriviaQuestions = async () => {
+    setLoading(true);
+    setErrorMessage("");
+
     try {
-      setLoading(true);
-      setErrorMessage("");
-
-      let token = localStorage.getItem("opentdb_token");
-      if (!token) {
-        const tokenRes = await fetch(
-          "https://opentdb.com/api_token.php?command=request",
-        );
-        const tokenData = await tokenRes.json();
-        if (tokenData.response_code === 0) {
-          token = tokenData.token;
-          localStorage.setItem("opentdb_token", token);
-        }
-      }
-
-      let apiUrl = "https://opentdb.com/api.php?amount=5&type=multiple";
-      if (token) {
-        apiUrl += `&token=${token}`;
-      }
-
-      const response = await fetch(apiUrl);
+      const response = await fetch(
+        "https://opentdb.com/api.php?amount=5&type=multiple",
+      );
 
       if (response.status === 429) {
         setCooldown(10);
         throw new Error(
-          "Terlalu banyak permintaan ke server (429). Silakan tunggu sebentar lalu klik Coba Lagi.",
+          "Server terlalu banyak menerima permintaan. Tunggu 10 detik lalu coba lagi.",
         );
       }
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Gagal mengambil soal. Status: ${response.status}`);
       }
 
       const data = await response.json();
 
-      if (data.response_code === 3 || data.response_code === 4) {
-        localStorage.removeItem("opentdb_token");
-        setLoading(false);
-        fetchTriviaQuestions();
-        return;
+      // OpenTDB menggunakan response_code
+      if (data.response_code !== 0) {
+        throw new Error("Soal gagal dimuat dari Open Trivia Database.");
       }
 
-      if (data.results && data.results.length > 0) {
-        const formattedQuestions = data.results.map((item) => {
-          const allAnswers = [...item.incorrect_answers, item.correct_answer];
-          const shuffledAnswers = allAnswers
-            .map((ans) => decodeHTML(ans))
-            .sort(() => Math.random() - 0.5);
-
-          return {
-            question: decodeHTML(item.question),
-            answers: shuffledAnswers,
-            correctAnswer: decodeHTML(item.correct_answer),
-          };
-        });
-
-        setQuestions(formattedQuestions);
-        setCurrentIndex(0);
-        setScore(0);
-      } else {
-        throw new Error("Data soal kosong dari API.");
+      if (!data.results || data.results.length === 0) {
+        throw new Error("Tidak ada soal yang diterima.");
       }
-    } catch (error) {
-      console.error("Detail Error Fetch:", error);
-      setErrorMessage(
-        error.message ||
-          "Gagal memuat soal dari Trivia DB. Periksa koneksi internet.",
+
+      const formattedQuestions = data.results.map((item) => {
+        const correctAnswer = decodeHTML(item.correct_answer);
+
+        const answers = [...item.incorrect_answers, item.correct_answer]
+          .map((answer) => decodeHTML(answer))
+          .sort(() => Math.random() - 0.5);
+
+        return {
+          question: decodeHTML(item.question),
+          answers: answers,
+          correctAnswer: correctAnswer,
+        };
+      });
+
+      setQuestions(formattedQuestions);
+      setCurrentIndex(0);
+      setScore(0);
+      setSelectedAnswer("");
+
+      // Simpan soal sementara
+      sessionStorage.setItem(
+        "quiz_questions",
+        JSON.stringify(formattedQuestions),
       );
+      sessionStorage.setItem("quiz_currentIndex", "0");
+      sessionStorage.setItem("quiz_score", "0");
+    } catch (error) {
+      console.error("Error:", error);
+      setErrorMessage(error.message || "Gagal memuat soal.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Ambil soal saat pertama kali membuka halaman
   useEffect(() => {
-    if (questions.length === 0) {
-      fetchTriviaQuestions();
-    }
+    fetchTriviaQuestions();
   }, []);
 
+  // Menjawab soal
   const handleNextQuestion = () => {
-    let updatedScore = score;
-    if (selectedAnswer === questions[currentIndex].correctAnswer) {
-      updatedScore = score + 1;
-      setScore(updatedScore);
+    if (!selectedAnswer) {
+      return;
     }
 
-    setSelectedAnswer("");
-    const nextIndex = currentIndex + 1;
+    const currentQuestion = questions[currentIndex];
 
-    if (nextIndex < questions.length) {
+    if (!currentQuestion) {
+      return;
+    }
+
+    let newScore = score;
+
+    // Cek jawaban
+    if (selectedAnswer === currentQuestion.correctAnswer) {
+      newScore = score + 1;
+    }
+
+    setScore(newScore);
+
+    // Jika masih ada soal
+    if (currentIndex < questions.length - 1) {
+      const nextIndex = currentIndex + 1;
+
       setCurrentIndex(nextIndex);
-    } else {
-      const playerName =
-        prompt("Kuis selesai! Masukkan nama kamu untuk Leaderboard:") ||
-        "Pemain Anonim";
+      setSelectedAnswer("");
 
-      const newEntry = {
-        name: playerName,
-        score: updatedScore,
-        date: new Date().toLocaleDateString(),
-      };
+      sessionStorage.setItem("quiz_currentIndex", String(nextIndex));
 
-      try {
-        const existingScores =
-          JSON.parse(localStorage.getItem("quizHistory")) || [];
-        const updatedScores = [...existingScores, newEntry];
-        localStorage.setItem("quizHistory", JSON.stringify(updatedScores));
-      } catch (error) {
-        console.error("Gagal menyimpan ke localStorage:", error);
-      }
+      sessionStorage.setItem("quiz_score", String(newScore));
 
-      sessionStorage.removeItem("quiz_questions");
-      sessionStorage.removeItem("quiz_currentIndex");
-      sessionStorage.removeItem("quiz_score");
-
-      setTimeout(() => {
-        navigate("/result", {
-          state: { score: updatedScore, total: questions.length },
-        });
-      }, 100);
+      return;
     }
+
+    // =========================
+    // KUIS SELESAI
+    // =========================
+
+    sessionStorage.removeItem("quiz_questions");
+    sessionStorage.removeItem("quiz_currentIndex");
+    sessionStorage.removeItem("quiz_score");
+
+    // Pergi ke halaman hasil
+    navigate("/result", {
+      state: {
+        score: newScore,
+        total: questions.length,
+      },
+    });
   };
 
+  // Loading
   if (loading) {
-    return <LoadingView message="Memuat soal dari Trivia DB... ⏳" />;
+    return <LoadingView message="Memuat soal..." />;
   }
 
+  // Error
   if (errorMessage) {
     return (
       <ErrorView
         errorMessage={errorMessage}
+        cooldown={cooldown}
+        onRetry={fetchTriviaQuestions}
+        buttonStyle={buttonStyle}
+      />
+    );
+  }
+
+  // Kalau soal tidak ada
+  if (questions.length === 0) {
+    return (
+      <ErrorView
+        errorMessage="Soal tidak tersedia."
         cooldown={cooldown}
         onRetry={fetchTriviaQuestions}
         buttonStyle={buttonStyle}
@@ -245,62 +266,24 @@ function MainQuizWrapper() {
         buttonStyle={buttonStyle}
       />
 
-      <Link to="/leaderboard">
+      <Link
+        to="/leaderboard"
+        style={{
+          display: "block",
+          textDecoration: "none",
+        }}
+      >
         <button
-          style={{ ...buttonStyle, backgroundColor: "#10b981", width: "100%" }}
+          type="button"
+          style={{
+            ...buttonStyle,
+            width: "100%",
+            backgroundColor: "#10b981",
+          }}
         >
-          Lihat Papan Peringkat (Leaderboard)
+          Lihat Leaderboard 🏆
         </button>
       </Link>
     </div>
   );
 }
-
-function LeaderboardWrapper({ containerStyle, buttonStyle }) {
-  const navigate = useNavigate();
-  const [scoresList, setScoresList] = useState([]);
-
-  useEffect(() => {
-    const savedScores = JSON.parse(localStorage.getItem("quizHistory")) || [];
-    const sorted = savedScores.sort((a, b) => b.score - a.score);
-    setScoresList(sorted);
-  }, []);
-
-  const handleRestartQuiz = () => {
-    sessionStorage.removeItem("quiz_questions");
-    sessionStorage.removeItem("quiz_currentIndex");
-    sessionStorage.removeItem("quiz_score");
-
-    navigate("/");
-  };
-
-  return (
-    <LeaderboardScreen
-      scores={scoresList}
-      handleRestartQuiz={handleRestartQuiz}
-      containerStyle={containerStyle}
-      buttonStyle={buttonStyle}
-    />
-  );
-}
-
-const containerStyle = {
-  maxWidth: "600px",
-  margin: "40px auto",
-  padding: "20px",
-  fontFamily: "Arial",
-  background: "#ffffff",
-  borderRadius: "12px",
-  boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-};
-
-const buttonStyle = {
-  marginTop: "20px",
-  padding: "10px 20px",
-  fontSize: "16px",
-  backgroundColor: "#007BFF",
-  color: "white",
-  border: "none",
-  borderRadius: "5px",
-  cursor: "pointer",
-};
