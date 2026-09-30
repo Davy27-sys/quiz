@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import AnswerButton from "./AnswerButton";
 
 export default function QuizScreen({
@@ -10,6 +10,31 @@ export default function QuizScreen({
   containerStyle,
   buttonStyle,
 }) {
+  const [timeLeft, setTimeLeft] = useState(15);
+
+  useEffect(() => {
+    // Reset timer menjadi 15 setiap berganti soal
+    setTimeLeft(15);
+
+    const timer = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          clearInterval(timer);
+
+          // Waktu habis, lanjut ke soal berikutnya
+          handleNextQuestion();
+
+          return 0;
+        }
+
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    // Cleanup untuk menghentikan timer soal sebelumnya
+    return () => clearInterval(timer);
+  }, [currentIndex]);
+
   if (!questions || questions.length === 0 || !questions[currentIndex]) {
     return <div>Memuat soal...</div>;
   }
@@ -25,6 +50,10 @@ export default function QuizScreen({
       </h4>
 
       <h2>{currentQuestion.question}</h2>
+
+      <h3 style={{ color: timeLeft <= 5 ? "red" : "#007BFF" }}>
+        Waktu: {timeLeft} detik
+      </h3>
 
       <div
         style={{
