@@ -13,17 +13,19 @@ export default function QuizScreen({
   const [timeLeft, setTimeLeft] = useState(15);
 
   useEffect(() => {
-    // Reset timer menjadi 15 setiap berganti soal
     setTimeLeft(15);
+  }, [currentIndex]);
+
+  useEffect(() => {
+    if (selectedAnswer) {
+      return;
+    }
 
     const timer = setInterval(() => {
       setTimeLeft((prevTime) => {
         if (prevTime <= 1) {
           clearInterval(timer);
-
-          // Waktu habis, lanjut ke soal berikutnya
           handleNextQuestion();
-
           return 0;
         }
 
@@ -31,9 +33,8 @@ export default function QuizScreen({
       });
     }, 1000);
 
-    // Cleanup untuk menghentikan timer soal sebelumnya
     return () => clearInterval(timer);
-  }, [currentIndex]);
+  }, [currentIndex, selectedAnswer, handleNextQuestion]);
 
   if (!questions || questions.length === 0 || !questions[currentIndex]) {
     return <div>Memuat soal...</div>;
@@ -51,7 +52,11 @@ export default function QuizScreen({
 
       <h2>{currentQuestion.question}</h2>
 
-      <h3 style={{ color: timeLeft <= 5 ? "red" : "#007BFF" }}>
+      <h3
+        style={{
+          color: timeLeft <= 5 ? "red" : "#007BFF",
+        }}
+      >
         Waktu: {timeLeft} detik
       </h3>
 
