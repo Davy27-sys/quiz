@@ -44,30 +44,24 @@ export default function QuizScreen({
 
   return (
     <div className="quiz-container" style={containerStyle}>
-      <h3 style={{ color: "#007BFF" }}>Kuis Trivia Online 🌍</h3>
+      {/* Judul */}
+      <h3 className="quiz-title">Kuis Trivia Online 🌍</h3>
 
-      <h4>
+      {/* Jumlah soal */}
+      <div className="question-number">
         Soal {currentIndex + 1} dari {questions.length}
-      </h4>
+      </div>
 
-      <h2>{currentQuestion.question}</h2>
+      {/* Pertanyaan */}
+      <h2 className="question">{currentQuestion.question}</h2>
 
-      <h3
-        style={{
-          color: timeLeft <= 5 ? "red" : "#007BFF",
-        }}
-      >
-        Waktu: {timeLeft} detik
+      {/* Timer */}
+      <h3 className={`timer ${timeLeft <= 5 ? "timer-danger" : ""}`}>
+        ⏱️ Waktu: {timeLeft} detik
       </h3>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          marginTop: "20px",
-        }}
-      >
+      {/* Pilihan jawaban */}
+      <div className="answers-container">
         {currentQuestion.answers.map((answer, index) => (
           <AnswerButton
             key={index}
@@ -78,16 +72,13 @@ export default function QuizScreen({
         ))}
       </div>
 
+      {/* Tombol berikutnya */}
       <button
         type="button"
         onClick={handleNextQuestion}
         disabled={!selectedAnswer}
-        style={{
-          ...buttonStyle,
-          width: "100%",
-          backgroundColor: selectedAnswer ? "#007BFF" : "#cccccc",
-          cursor: selectedAnswer ? "pointer" : "not-allowed",
-        }}
+        className="primary-button"
+        style={buttonStyle}
       >
         {currentIndex === questions.length - 1
           ? "Selesai 🎉"
