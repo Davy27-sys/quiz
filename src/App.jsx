@@ -12,6 +12,7 @@ import ErrorView from "./components/ErrorView";
 import QuizScreen from "./components/QuizScreen";
 import ResultScreen from "./components/ResultScreen";
 import LeaderboardScreen from "./components/LeaderboardScreen";
+import CreateQuestion from "./components/CreateQuestion";
 
 import "./App.css";
 
@@ -46,8 +47,10 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Halaman utama kuis */}
         <Route path="/" element={<MainQuiz />} />
 
+        {/* Halaman hasil */}
         <Route
           path="/result"
           element={
@@ -58,6 +61,7 @@ export default function App() {
           }
         />
 
+        {/* Halaman leaderboard */}
         <Route
           path="/leaderboard"
           element={
@@ -67,6 +71,9 @@ export default function App() {
             />
           }
         />
+
+        {/* Halaman membuat soal custom */}
+        <Route path="/buat-soal" element={<CreateQuestion />} />
       </Routes>
     </BrowserRouter>
   );
@@ -77,14 +84,12 @@ function MainQuiz() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState("");
-
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [cooldown, setCooldown] = useState(0);
 
   const navigate = useNavigate();
 
-  // Countdown error 429
   useEffect(() => {
     if (cooldown <= 0) return;
 
@@ -102,7 +107,6 @@ function MainQuiz() {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  // Ambil soal dari API
   const fetchTriviaQuestions = async () => {
     setLoading(true);
     setErrorMessage("");
@@ -124,8 +128,6 @@ function MainQuiz() {
       }
 
       const data = await response.json();
-
-      // OpenTDB menggunakan response_code
       if (data.response_code !== 0) {
         throw new Error("Soal gagal dimuat dari Open Trivia Database.");
       }
@@ -136,7 +138,6 @@ function MainQuiz() {
 
       const formattedQuestions = data.results.map((item) => {
         const correctAnswer = decodeHTML(item.correct_answer);
-
         const answers = [...item.incorrect_answers, item.correct_answer]
           .map((answer) => decodeHTML(answer))
           .sort(() => Math.random() - 0.5);
@@ -153,11 +154,11 @@ function MainQuiz() {
       setScore(0);
       setSelectedAnswer("");
 
-      // Simpan soal sementara
       sessionStorage.setItem(
         "quiz_questions",
         JSON.stringify(formattedQuestions),
       );
+
       sessionStorage.setItem("quiz_currentIndex", "0");
       sessionStorage.setItem("quiz_score", "0");
     } catch (error) {
@@ -168,55 +169,40 @@ function MainQuiz() {
     }
   };
 
-  // Ambil soal saat pertama kali membuka halaman
   useEffect(() => {
     fetchTriviaQuestions();
   }, []);
 
-  // Menjawab soal
   const handleNextQuestion = () => {
     if (!selectedAnswer) {
       return;
     }
 
     const currentQuestion = questions[currentIndex];
-
     if (!currentQuestion) {
       return;
     }
 
     let newScore = score;
-
-    // Cek jawaban
     if (selectedAnswer === currentQuestion.correctAnswer) {
       newScore = score + 1;
     }
 
     setScore(newScore);
-
-    // Jika masih ada soal
     if (currentIndex < questions.length - 1) {
       const nextIndex = currentIndex + 1;
-
       setCurrentIndex(nextIndex);
       setSelectedAnswer("");
-
       sessionStorage.setItem("quiz_currentIndex", String(nextIndex));
-
       sessionStorage.setItem("quiz_score", String(newScore));
 
       return;
     }
 
-    // =========================
-    // KUIS SELESAI
-    // =========================
-
     sessionStorage.removeItem("quiz_questions");
     sessionStorage.removeItem("quiz_currentIndex");
     sessionStorage.removeItem("quiz_score");
 
-    // Pergi ke halaman hasil
     navigate("/result", {
       state: {
         score: newScore,
@@ -225,12 +211,10 @@ function MainQuiz() {
     });
   };
 
-  // Loading
   if (loading) {
     return <LoadingView message="Memuat soal..." />;
   }
 
-  // Error
   if (errorMessage) {
     return (
       <ErrorView
@@ -242,7 +226,6 @@ function MainQuiz() {
     );
   }
 
-  // Kalau soal tidak ada
   if (questions.length === 0) {
     return (
       <ErrorView
@@ -266,6 +249,7 @@ function MainQuiz() {
         buttonStyle={buttonStyle}
       />
 
+      {/* Tombol Leaderboard */}
       <Link
         to="/leaderboard"
         style={{
@@ -282,6 +266,26 @@ function MainQuiz() {
           }}
         >
           Lihat Leaderboard 🏆
+        </button>
+      </Link>
+
+      {/* Tombol Buat Soal Custom */}
+      <Link
+        to="/buat-soal"
+        style={{
+          display: "block",
+          textDecoration: "none",
+        }}
+      >
+        <button
+          type="button"
+          style={{
+            ...buttonStyle,
+            width: "100%",
+            backgroundColor: "#8b5cf6",
+          }}
+        >
+          Buat Soal Custom ✏️
         </button>
       </Link>
     </div>

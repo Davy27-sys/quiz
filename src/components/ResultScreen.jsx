@@ -47,7 +47,6 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
 
       setSaved(true);
 
-      // Setelah tersimpan, masuk leaderboard
       navigate("/leaderboard");
     } catch (error) {
       console.error("Gagal menyimpan leaderboard:", error);
