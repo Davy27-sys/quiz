@@ -27,7 +27,6 @@ export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
       setHistory(sorted);
     } catch (error) {
       console.error("Gagal membaca leaderboard:", error);
-
       setHistory([]);
     }
   };
@@ -41,7 +40,14 @@ export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
       <h2 style={{ textAlign: "center" }}>🏆 Leaderboard</h2>
 
       {history.length === 0 ? (
-        <p style={{ textAlign: "center" }}>Belum ada skor.</p>
+        <p
+          style={{
+            textAlign: "center",
+            color: "#1f2937",
+          }}
+        >
+          Belum ada skor.
+        </p>
       ) : (
         <ol style={{ paddingLeft: "25px" }}>
           {history.map((item, index) => (
@@ -51,6 +57,7 @@ export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
                 marginBottom: "15px",
                 padding: "10px",
                 background: "#f8f8f8",
+                color: "#1f2937",
                 borderRadius: "8px",
               }}
             >

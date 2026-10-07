@@ -1,32 +1,50 @@
-
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function CreateQuestion() {
+  const navigate = useNavigate();
+
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState(["", "", "", ""]);
   const [correctAnswer, setCorrectAnswer] = useState("");
+  const [errors, setErrors] = useState({});
+  const [success, setSuccess] = useState("");
 
   const handleAnswerChange = (index, value) => {
     const newAnswers = [...answers];
     newAnswers[index] = value;
     setAnswers(newAnswers);
+
+    setErrors((prev) => ({
+      ...prev,
+      answers: "",
+    }));
+
+    setSuccess("");
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
 
+    setErrors({});
+    setSuccess("");
+
+    const newErrors = {};
+
     if (!question.trim()) {
-      alert("Pertanyaan harus diisi.");
-      return;
+      newErrors.question = "Pertanyaan harus diisi.";
     }
 
     if (answers.some((answer) => !answer.trim())) {
-      alert("Semua pilihan jawaban harus diisi.");
-      return;
+      newErrors.answers = "Semua pilihan jawaban harus diisi.";
     }
 
     if (!correctAnswer) {
-      alert("Pilih jawaban yang benar.");
+      newErrors.correctAnswer = "Pilih jawaban yang benar.";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -36,13 +54,21 @@ export default function CreateQuestion() {
       correctAnswer: correctAnswer,
     };
 
-    console.log("Soal custom:", customQuestion);
+    const savedQuestions =
+      JSON.parse(localStorage.getItem("custom_questions")) || [];
 
-    alert("Soal berhasil dibuat!");
+    const updatedQuestions = [...savedQuestions, customQuestion];
+
+    localStorage.setItem("custom_questions", JSON.stringify(updatedQuestions));
 
     setQuestion("");
     setAnswers(["", "", "", ""]);
     setCorrectAnswer("");
+    setSuccess("Soal berhasil dibuat dan disimpan!");
+  };
+
+  const handleBackToQuiz = () => {
+    navigate("/");
   };
 
   return (
@@ -56,21 +82,40 @@ export default function CreateQuestion() {
     >
       <h2 style={{ textAlign: "center" }}>Buat Soal Custom</h2>
 
+      {success && (
+        <p
+          style={{
+            color: "#059669",
+            backgroundColor: "#d1fae5",
+            padding: "10px",
+            borderRadius: "8px",
+          }}
+        >
+          {success}
+        </p>
+      )}
+
       <form onSubmit={handleSubmit}>
-        {/* Pertanyaan */}
         <label>
           <strong>Pertanyaan:</strong>
         </label>
 
         <textarea
           value={question}
-          onChange={(event) => setQuestion(event.target.value)}
+          onChange={(event) => {
+            setQuestion(event.target.value);
+            setErrors((prev) => ({
+              ...prev,
+              question: "",
+            }));
+            setSuccess("");
+          }}
           placeholder="Masukkan pertanyaan..."
           rows="4"
           style={{
             width: "100%",
             marginTop: "8px",
-            marginBottom: "20px",
+            marginBottom: "5px",
             padding: "10px",
             fontSize: "16px",
             borderRadius: "8px",
@@ -78,7 +123,12 @@ export default function CreateQuestion() {
           }}
         />
 
-        {/* Pilihan jawaban */}
+        {errors.question && (
+          <p style={{ color: "#dc2626", marginTop: "5px" }}>
+            {errors.question}
+          </p>
+        )}
+
         <strong>Pilihan Jawaban:</strong>
 
         {answers.map((answer, index) => (
@@ -96,7 +146,16 @@ export default function CreateQuestion() {
               name="correctAnswer"
               value={answer}
               checked={correctAnswer === answer && answer !== ""}
-              onChange={() => setCorrectAnswer(answer)}
+              onChange={() => {
+                setCorrectAnswer(answer);
+
+                setErrors((prev) => ({
+                  ...prev,
+                  correctAnswer: "",
+                }));
+
+                setSuccess("");
+              }}
             />
 
             <input
@@ -117,10 +176,21 @@ export default function CreateQuestion() {
           </div>
         ))}
 
+        {errors.answers && (
+          <p style={{ color: "#dc2626", marginTop: "5px" }}>{errors.answers}</p>
+        )}
+
+        {errors.correctAnswer && (
+          <p style={{ color: "#dc2626", marginTop: "5px" }}>
+            {errors.correctAnswer}
+          </p>
+        )}
+
         <p style={{ fontSize: "14px", color: "#666" }}>
           Pilih radio button di sebelah pilihan yang merupakan jawaban benar.
         </p>
 
+        {/* Tombol Buat Soal */}
         <button
           type="submit"
           style={{
@@ -137,8 +207,26 @@ export default function CreateQuestion() {
         >
           Buat Soal
         </button>
+
+        {/* Tombol Kembali ke Kuis */}
+        <button
+          type="button"
+          onClick={handleBackToQuiz}
+          style={{
+            width: "100%",
+            marginTop: "10px",
+            padding: "12px",
+            fontSize: "16px",
+            backgroundColor: "#6366f1",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+          }}
+        >
+          Kembali ke Kuis
+        </button>
       </form>
     </div>
   );
 }
-
