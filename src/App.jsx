@@ -13,6 +13,7 @@ import QuizScreen from "./components/QuizScreen";
 import ResultScreen from "./components/ResultScreen";
 import LeaderboardScreen from "./components/LeaderboardScreen";
 import CreateQuestion from "./components/CreateQuestion";
+import DaftarSoal from "./components/DaftarSoal";
 
 import "./App.css";
 
@@ -74,6 +75,9 @@ export default function App() {
 
         {/* Halaman membuat soal custom */}
         <Route path="/buat-soal" element={<CreateQuestion />} />
+
+        {/* Halaman daftar soal custom */}
+        <Route path="/daftar-soal" element={<DaftarSoal />} />
       </Routes>
     </BrowserRouter>
   );
@@ -128,6 +132,7 @@ function MainQuiz() {
       }
 
       const data = await response.json();
+
       if (data.response_code !== 0) {
         throw new Error("Soal gagal dimuat dari Open Trivia Database.");
       }
@@ -138,6 +143,7 @@ function MainQuiz() {
 
       const formattedQuestions = data.results.map((item) => {
         const correctAnswer = decodeHTML(item.correct_answer);
+
         const answers = [...item.incorrect_answers, item.correct_answer]
           .map((answer) => decodeHTML(answer))
           .sort(() => Math.random() - 0.5);
@@ -179,16 +185,19 @@ function MainQuiz() {
     }
 
     const currentQuestion = questions[currentIndex];
+
     if (!currentQuestion) {
       return;
     }
 
     let newScore = score;
+
     if (selectedAnswer === currentQuestion.correctAnswer) {
       newScore = score + 1;
     }
 
     setScore(newScore);
+
     if (currentIndex < questions.length - 1) {
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
@@ -286,6 +295,26 @@ function MainQuiz() {
           }}
         >
           Buat Soal Custom ✏️
+        </button>
+      </Link>
+
+      {/* Tombol Lihat Soal Custom */}
+      <Link
+        to="/daftar-soal"
+        style={{
+          display: "block",
+          textDecoration: "none",
+        }}
+      >
+        <button
+          type="button"
+          style={{
+            ...buttonStyle,
+            width: "100%",
+            backgroundColor: "#f59e0b",
+          }}
+        >
+          Lihat Soal Custom 📚
         </button>
       </Link>
     </div>
