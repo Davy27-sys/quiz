@@ -3,18 +3,15 @@ import { useNavigate } from "react-router-dom";
 
 export default function CreateQuestion() {
   const navigate = useNavigate();
-
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState(["", "", "", ""]);
-  const [correctAnswer, setCorrectAnswer] = useState("");
+  const [correctAnswer, setCorrectAnswer] = useState(null);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState("");
-
   const handleAnswerChange = (index, value) => {
     const newAnswers = [...answers];
     newAnswers[index] = value;
     setAnswers(newAnswers);
-
     setErrors((prev) => ({
       ...prev,
       answers: "",
@@ -25,12 +22,9 @@ export default function CreateQuestion() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-
     setErrors({});
     setSuccess("");
-
     const newErrors = {};
-
     if (!question.trim()) {
       newErrors.question = "Pertanyaan harus diisi.";
     }
@@ -39,7 +33,7 @@ export default function CreateQuestion() {
       newErrors.answers = "Semua pilihan jawaban harus diisi.";
     }
 
-    if (!correctAnswer) {
+    if (correctAnswer === null) {
       newErrors.correctAnswer = "Pilih jawaban yang benar.";
     }
 
@@ -51,19 +45,16 @@ export default function CreateQuestion() {
     const customQuestion = {
       question: question.trim(),
       answers: answers.map((answer) => answer.trim()),
-      correctAnswer: correctAnswer,
+      correctAnswer: answers[correctAnswer].trim(),
     };
 
     const savedQuestions =
       JSON.parse(localStorage.getItem("custom_questions")) || [];
-
     const updatedQuestions = [...savedQuestions, customQuestion];
-
     localStorage.setItem("custom_questions", JSON.stringify(updatedQuestions));
-
     setQuestion("");
     setAnswers(["", "", "", ""]);
-    setCorrectAnswer("");
+    setCorrectAnswer(null);
     setSuccess("Soal berhasil dibuat dan disimpan!");
   };
 
@@ -144,10 +135,10 @@ export default function CreateQuestion() {
             <input
               type="radio"
               name="correctAnswer"
-              value={answer}
-              checked={correctAnswer === answer && answer !== ""}
+              value={index}
+              checked={correctAnswer === index}
               onChange={() => {
-                setCorrectAnswer(answer);
+                setCorrectAnswer(index);
 
                 setErrors((prev) => ({
                   ...prev,
