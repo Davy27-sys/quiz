@@ -8,10 +8,12 @@ export default function CreateQuestion() {
   const [correctAnswer, setCorrectAnswer] = useState(null);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState("");
+
   const handleAnswerChange = (index, value) => {
     const newAnswers = [...answers];
     newAnswers[index] = value;
     setAnswers(newAnswers);
+
     setErrors((prev) => ({
       ...prev,
       answers: "",
@@ -24,7 +26,9 @@ export default function CreateQuestion() {
     event.preventDefault();
     setErrors({});
     setSuccess("");
+
     const newErrors = {};
+
     if (!question.trim()) {
       newErrors.question = "Pertanyaan harus diisi.";
     }
@@ -45,17 +49,32 @@ export default function CreateQuestion() {
     const customQuestion = {
       question: question.trim(),
       answers: answers.map((answer) => answer.trim()),
-      correctAnswer: answers[correctAnswer].trim(),
+      correctAnswerIndex: correctAnswer,
     };
 
-    const savedQuestions =
-      JSON.parse(localStorage.getItem("custom_questions")) || [];
-    const updatedQuestions = [...savedQuestions, customQuestion];
-    localStorage.setItem("custom_questions", JSON.stringify(updatedQuestions));
-    setQuestion("");
-    setAnswers(["", "", "", ""]);
-    setCorrectAnswer(null);
-    setSuccess("Soal berhasil dibuat dan disimpan!");
+    try {
+      const savedData = localStorage.getItem("custom_questions");
+      const parsedData = savedData ? JSON.parse(savedData) : [];
+
+      const savedQuestions = Array.isArray(parsedData) ? parsedData : [];
+
+      const updatedQuestions = [...savedQuestions, customQuestion];
+
+      localStorage.setItem(
+        "custom_questions",
+        JSON.stringify(updatedQuestions),
+      );
+
+      setQuestion("");
+      setAnswers(["", "", "", ""]);
+      setCorrectAnswer(null);
+      setSuccess("Soal berhasil dibuat dan disimpan!");
+    } catch (error) {
+      console.error("Gagal menyimpan soal:", error);
+      setErrors({
+        submit: "Soal gagal disimpan. Silakan coba lagi.",
+      });
+    }
   };
 
   const handleBackToQuiz = () => {
@@ -143,6 +162,7 @@ export default function CreateQuestion() {
                 setErrors((prev) => ({
                   ...prev,
                   correctAnswer: "",
+                  submit: "",
                 }));
 
                 setSuccess("");
@@ -177,11 +197,14 @@ export default function CreateQuestion() {
           </p>
         )}
 
+        {errors.submit && (
+          <p style={{ color: "#dc2626", marginTop: "5px" }}>{errors.submit}</p>
+        )}
+
         <p style={{ fontSize: "14px", color: "#666" }}>
           Pilih radio button di sebelah pilihan yang merupakan jawaban benar.
         </p>
 
-        {/* Tombol Buat Soal */}
         <button
           type="submit"
           style={{
@@ -199,7 +222,6 @@ export default function CreateQuestion() {
           Buat Soal
         </button>
 
-        {/* Tombol Kembali ke Kuis */}
         <button
           type="button"
           onClick={handleBackToQuiz}

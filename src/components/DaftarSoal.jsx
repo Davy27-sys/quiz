@@ -63,62 +63,76 @@ export default function DaftarSoal() {
             <p>Belum ada soal custom.</p>
           </div>
         ) : (
-          questions.map((item, index) => (
-            <div
-              key={index}
-              style={{
-                background: "rgba(15, 23, 42, 0.85)",
-                border: "1px solid rgba(255,255,255,0.5)",
-                borderRadius: "12px",
-                padding: "20px",
-                marginBottom: "18px",
-              }}
-            >
-              <h2
+          questions.map((item, index) => {
+            const hasCorrectIndex =
+              Number.isInteger(item.correctAnswerIndex) &&
+              item.correctAnswerIndex >= 0 &&
+              item.correctAnswerIndex < item.answers.length;
+
+            const legacyCorrectIndex = hasCorrectIndex
+              ? -1
+              : item.answers.findIndex(
+                  (answer) => answer === item.correctAnswer,
+                );
+
+            return (
+              <div
+                key={index}
                 style={{
-                  fontSize: "24px",
-                  marginTop: "0",
-                  marginBottom: "16px",
+                  background: "rgba(15, 23, 42, 0.85)",
+                  border: "1px solid rgba(255,255,255,0.5)",
+                  borderRadius: "12px",
+                  padding: "20px",
+                  marginBottom: "18px",
                 }}
               >
-                {index + 1}. {item.question}
-              </h2>
+                <h2
+                  style={{
+                    fontSize: "24px",
+                    marginTop: "0",
+                    marginBottom: "16px",
+                  }}
+                >
+                  {index + 1}. {item.question}
+                </h2>
 
-              <div>
-                {item.answers.map((answer, answerIndex) => {
-                  const isCorrect =
-                    item.correctAnswer === answer ||
-                    item.correctAnswer === answerIndex;
+                <div>
+                  {item.answers.map((answer, answerIndex) => {
+                    const isCorrect = hasCorrectIndex
+                      ? answerIndex === item.correctAnswerIndex
+                      : answerIndex === legacyCorrectIndex;
 
-                  return (
-                    <div
-                      key={answerIndex}
-                      style={{
-                        padding: "10px 14px",
-                        marginBottom: "7px",
-                        borderRadius: "8px",
-                        backgroundColor: isCorrect ? "#d1fae5" : "#f3f4f6",
-                        color: isCorrect ? "#065f46" : "#111827",
-                        fontSize: "16px",
-                        fontWeight: isCorrect ? "600" : "400",
-                      }}
-                    >
-                      <strong>{String.fromCharCode(65 + answerIndex)}.</strong>{" "}
-                      {answer}
-                      {isCorrect && (
-                        <span style={{ marginLeft: "10px" }}>
-                          ✅ Jawaban benar
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                    return (
+                      <div
+                        key={answerIndex}
+                        style={{
+                          padding: "10px 14px",
+                          marginBottom: "7px",
+                          borderRadius: "8px",
+                          backgroundColor: isCorrect ? "#d1fae5" : "#f3f4f6",
+                          color: isCorrect ? "#065f46" : "#111827",
+                          fontSize: "16px",
+                          fontWeight: isCorrect ? "600" : "400",
+                        }}
+                      >
+                        <strong>
+                          {String.fromCharCode(65 + answerIndex)}.
+                        </strong>{" "}
+                        {answer}
+                        {isCorrect && (
+                          <span style={{ marginLeft: "10px" }}>
+                            ✅ Jawaban benar
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
 
-        {/* Tombol kembali ke kuis */}
         <button
           type="button"
           onClick={() => navigate("/")}
