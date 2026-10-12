@@ -27,6 +27,30 @@ export default function DaftarSoal() {
     }
   }, []);
 
+  const handleDelete = (indexToDelete) => {
+    const confirmDelete = window.confirm("Yakin ingin menghapus soal ini?");
+
+    if (!confirmDelete) return;
+
+    const updatedQuestions = questions.filter(
+      (_, index) => index !== indexToDelete,
+    );
+
+    localStorage.setItem("custom_questions", JSON.stringify(updatedQuestions));
+
+    setQuestions(updatedQuestions);
+  };
+
+  const handleEdit = (index, item) => {
+    navigate("/buat-soal", {
+      state: {
+        mode: "edit",
+        index: index,
+        question: item,
+      },
+    });
+  };
+
   return (
     <div
       style={{
@@ -45,6 +69,7 @@ export default function DaftarSoal() {
           style={{
             fontSize: "36px",
             marginBottom: "20px",
+            color: "#ffffff",
           }}
         >
           Daftar Soal Custom
@@ -64,16 +89,16 @@ export default function DaftarSoal() {
           </div>
         ) : (
           questions.map((item, index) => {
+            const answers = Array.isArray(item.answers) ? item.answers : [];
+
             const hasCorrectIndex =
               Number.isInteger(item.correctAnswerIndex) &&
               item.correctAnswerIndex >= 0 &&
-              item.correctAnswerIndex < item.answers.length;
+              item.correctAnswerIndex < answers.length;
 
             const legacyCorrectIndex = hasCorrectIndex
               ? -1
-              : item.answers.findIndex(
-                  (answer) => answer === item.correctAnswer,
-                );
+              : answers.findIndex((answer) => answer === item.correctAnswer);
 
             return (
               <div
@@ -91,13 +116,14 @@ export default function DaftarSoal() {
                     fontSize: "24px",
                     marginTop: "0",
                     marginBottom: "16px",
+                    color: "#ffffff",
                   }}
                 >
                   {index + 1}. {item.question}
                 </h2>
 
                 <div>
-                  {item.answers.map((answer, answerIndex) => {
+                  {answers.map((answer, answerIndex) => {
                     const isCorrect = hasCorrectIndex
                       ? answerIndex === item.correctAnswerIndex
                       : answerIndex === legacyCorrectIndex;
@@ -128,6 +154,48 @@ export default function DaftarSoal() {
                     );
                   })}
                 </div>
+
+                {/* Tombol Edit */}
+                <button
+                  type="button"
+                  onClick={() => handleEdit(index, item)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    padding: "10px 16px",
+                    marginTop: "15px",
+                    fontSize: "15px",
+                    fontWeight: "600",
+                    backgroundColor: "#f59e0b",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                  }}
+                >
+                  ✏️ Edit Soal
+                </button>
+
+                {/* Tombol Hapus */}
+                <button
+                  type="button"
+                  onClick={() => handleDelete(index)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    padding: "10px 16px",
+                    marginTop: "10px",
+                    fontSize: "15px",
+                    fontWeight: "600",
+                    backgroundColor: "#dc2626",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                  }}
+                >
+                  🗑️ Hapus Soal
+                </button>
               </div>
             );
           })
