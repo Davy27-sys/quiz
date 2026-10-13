@@ -1,13 +1,55 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function CreateQuestion() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState(["", "", "", ""]);
   const [correctAnswer, setCorrectAnswer] = useState(null);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState("");
+  const editMode = location.state?.mode === "edit";
+  const editIndex = location.state?.index;
+  const editQuestion = location.state?.question;
+
+  useEffect(() => {
+    if (editMode && editQuestion) {
+      setQuestion(editQuestion.question || "");
+
+      setAnswers(
+        Array.isArray(editQuestion.answers) && editQuestion.answers.length === 4
+          ? [...editQuestion.answers]
+          : ["", "", "", ""],
+      );
+
+      let correctIndex = editQuestion.correctAnswerIndex;
+
+      if (correctIndex === undefined) {
+        if (typeof editQuestion.correctAnswer === "number") {
+          correctIndex = editQuestion.correctAnswer;
+        } else {
+          correctIndex = editQuestion.answers?.indexOf(
+            editQuestion.correctAnswer,
+          );
+        }
+      }
+
+      setCorrectAnswer(
+        Number.isInteger(correctIndex) && correctIndex >= 0 && correctIndex < 4
+          ? correctIndex
+          : null,
+      );
+    } else {
+      setQuestion("");
+      setAnswers(["", "", "", ""]);
+      setCorrectAnswer(null);
+    }
+
+    setErrors({});
+    setSuccess("");
+  }, [location.key, editMode, editQuestion]);
 
   const handleAnswerChange = (index, value) => {
     const newAnswers = [...answers];
@@ -17,6 +59,7 @@ export default function CreateQuestion() {
     setErrors((prev) => ({
       ...prev,
       answers: "",
+      submit: "",
     }));
 
     setSuccess("");
@@ -37,7 +80,11 @@ export default function CreateQuestion() {
       newErrors.answers = "Semua pilihan jawaban harus diisi.";
     }
 
-    if (correctAnswer === null) {
+    if (
+      !Number.isInteger(correctAnswer) ||
+      correctAnswer < 0 ||
+      correctAnswer > 3
+    ) {
       newErrors.correctAnswer = "Pilih jawaban yang benar.";
     }
 
@@ -56,9 +103,29 @@ export default function CreateQuestion() {
       const savedData = localStorage.getItem("custom_questions");
       const parsedData = savedData ? JSON.parse(savedData) : [];
 
-      const savedQuestions = Array.isArray(parsedData) ? parsedData : [];
+      if (!Array.isArray(parsedData)) {
+        throw new Error("Data soal di localStorage tidak valid.");
+      }
 
-      const updatedQuestions = [...savedQuestions, customQuestion];
+      let updatedQuestions;
+
+      if (editMode) {
+        if (
+          !Number.isInteger(editIndex) ||
+          editIndex < 0 ||
+          editIndex >= parsedData.length
+        ) {
+          setErrors({
+            submit: "Soal yang ingin diedit tidak ditemukan.",
+          });
+          return;
+        }
+
+        updatedQuestions = [...parsedData];
+        updatedQuestions[editIndex] = customQuestion;
+      } else {
+        updatedQuestions = [...parsedData, customQuestion];
+      }
 
       localStorage.setItem(
         "custom_questions",
@@ -68,9 +135,16 @@ export default function CreateQuestion() {
       setQuestion("");
       setAnswers(["", "", "", ""]);
       setCorrectAnswer(null);
-      setSuccess("Soal berhasil dibuat dan disimpan!");
+      setErrors({});
+
+      setSuccess(
+        editMode
+          ? "Soal berhasil diperbarui!"
+          : "Soal berhasil dibuat dan disimpan!",
+      );
     } catch (error) {
       console.error("Gagal menyimpan soal:", error);
+
       setErrors({
         submit: "Soal gagal disimpan. Silakan coba lagi.",
       });
@@ -78,7 +152,7 @@ export default function CreateQuestion() {
   };
 
   const handleBackToQuiz = () => {
-    navigate("/");
+    navigate("/", { replace: true });
   };
 
   return (
@@ -90,7 +164,9 @@ export default function CreateQuestion() {
         padding: "25px",
       }}
     >
-      <h2 style={{ textAlign: "center" }}>Buat Soal Custom</h2>
+      <h2 style={{ textAlign: "center" }}>
+        {editMode ? "Edit Soal Custom" : "Buat Soal Custom"}
+      </h2>
 
       {success && (
         <p
@@ -114,10 +190,13 @@ export default function CreateQuestion() {
           value={question}
           onChange={(event) => {
             setQuestion(event.target.value);
+
             setErrors((prev) => ({
               ...prev,
               question: "",
+              submit: "",
             }));
+
             setSuccess("");
           }}
           placeholder="Masukkan pertanyaan..."
@@ -219,7 +298,7 @@ export default function CreateQuestion() {
             cursor: "pointer",
           }}
         >
-          Buat Soal
+          {editMode ? "Simpan Perubahan" : "Buat Soal"}
         </button>
 
         <button
