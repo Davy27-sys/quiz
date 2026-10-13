@@ -3,10 +3,9 @@ import { useNavigate } from "react-router-dom";
 
 export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
   const navigate = useNavigate();
-
   const [history, setHistory] = useState([]);
 
-  const loadLeaderboard = () => {
+  useEffect(() => {
     try {
       const saved = localStorage.getItem("quizHistory");
 
@@ -22,56 +21,53 @@ export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
         return;
       }
 
-      const sorted = [...data].sort((a, b) => b.score - a.score);
-
-      setHistory(sorted);
+      setHistory([...data].sort((a, b) => b.score - a.score));
     } catch (error) {
       console.error("Gagal membaca leaderboard:", error);
       setHistory([]);
     }
-  };
-
-  useEffect(() => {
-    loadLeaderboard();
   }, []);
 
   return (
-    <div className="quiz-container" style={containerStyle}>
-      <h2 style={{ textAlign: "center" }}>🏆 Leaderboard</h2>
+    <div
+      className="quiz-container"
+      style={{
+        ...containerStyle,
+        background: "#fffaf0",
+      }}
+    >
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div style={{ fontSize: 40 }}>🏆</div>
+        <h2>Leaderboard</h2>
+        <p style={{ color: "#718096" }}>
+          Para penjelajah dengan skor tertinggi
+        </p>
+      </div>
 
       {history.length === 0 ? (
-        <p
+        <div
           style={{
+            padding: 24,
+            background: "#edf3e6",
+            borderRadius: 8,
             textAlign: "center",
-            color: "#1f2937",
           }}
         >
-          Belum ada skor.
-        </p>
+          Belum ada skor. Yuk, mulai bermain!
+        </div>
       ) : (
-        <ol style={{ paddingLeft: "25px" }}>
+        <ol style={{ paddingLeft: 26 }}>
           {history.map((item, index) => (
-            <li
-              key={index}
-              style={{
-                marginBottom: "15px",
-                padding: "10px",
-                background: "#f8f8f8",
-                color: "#1f2937",
-                borderRadius: "8px",
-              }}
-            >
-              <strong>{item.name}</strong>
+            <li key={index}>
+              <strong>
+                {index + 1}. {item.name}
+              </strong>
 
-              <br />
-
-              <span>
+              <div style={{ marginTop: 6 }}>
                 Skor: {item.score} / {item.total || 5}
-              </span>
+              </div>
 
-              <br />
-
-              <small style={{ color: "#777" }}>{item.date}</small>
+              <small style={{ color: "#718096" }}>{item.date}</small>
             </li>
           ))}
         </ol>
@@ -80,9 +76,11 @@ export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
       <button
         type="button"
         onClick={() => navigate("/")}
+        className="primary-button"
         style={{
           ...buttonStyle,
           width: "100%",
+          marginTop: 16,
         }}
       >
         Kembali ke Kuis

@@ -6,86 +6,97 @@ export default function DaftarSoal() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const savedQuestions = localStorage.getItem("custom_questions");
-
-    if (!savedQuestions) {
-      setQuestions([]);
-      return;
-    }
-
     try {
+      const savedQuestions = localStorage.getItem("custom_questions");
+
+      if (!savedQuestions) {
+        setQuestions([]);
+        return;
+      }
+
       const parsedQuestions = JSON.parse(savedQuestions);
 
-      if (Array.isArray(parsedQuestions)) {
-        setQuestions(parsedQuestions);
-      } else {
-        setQuestions([]);
-      }
+      setQuestions(Array.isArray(parsedQuestions) ? parsedQuestions : []);
     } catch (error) {
-      console.error("Gagal membaca custom_questions:", error);
+      console.error("Gagal membaca soal:", error);
       setQuestions([]);
     }
   }, []);
 
   const handleDelete = (indexToDelete) => {
-    const confirmDelete = window.confirm("Yakin ingin menghapus soal ini?");
+    if (!window.confirm("Yakin ingin menghapus soal ini?")) {
+      return;
+    }
 
-    if (!confirmDelete) return;
+    try {
+      const saved = localStorage.getItem("custom_questions");
+      const storedQuestions = saved ? JSON.parse(saved) : [];
 
-    const updatedQuestions = questions.filter(
-      (_, index) => index !== indexToDelete,
-    );
+      if (!Array.isArray(storedQuestions)) {
+        throw new Error("Data soal tidak valid.");
+      }
 
-    localStorage.setItem("custom_questions", JSON.stringify(updatedQuestions));
+      const updatedQuestions = storedQuestions.filter(
+        (_, index) => index !== indexToDelete,
+      );
 
-    setQuestions(updatedQuestions);
+      localStorage.setItem(
+        "custom_questions",
+        JSON.stringify(updatedQuestions),
+      );
+
+      setQuestions(updatedQuestions);
+    } catch (error) {
+      console.error("Gagal menghapus soal:", error);
+      alert("Soal gagal dihapus. Silakan coba lagi.");
+    }
   };
 
   const handleEdit = (index, item) => {
     navigate("/buat-soal", {
       state: {
         mode: "edit",
-        index: index,
+        index,
         question: item,
       },
     });
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        padding: "30px 20px",
-        boxSizing: "border-box",
-      }}
-    >
+    <div className="custom-list-page">
       <div
         style={{
-          maxWidth: "800px",
+          maxWidth: 760,
           margin: "0 auto",
         }}
       >
-        <h1
-          style={{
-            fontSize: "36px",
-            marginBottom: "20px",
-            color: "#ffffff",
-          }}
-        >
-          Daftar Soal Custom
-        </h1>
+        <header style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ fontSize: 42 }}>🦖</div>
+
+          <h1>Soal Custom</h1>
+
+          <p style={{ color: "#718096" }}>Koleksi pertanyaan buatanmu</p>
+        </header>
 
         {questions.length === 0 ? (
           <div
             style={{
-              background: "#ffffff",
-              color: "#111827",
-              padding: "20px",
-              borderRadius: "10px",
+              padding: 28,
               textAlign: "center",
+              background: "#fffaf0",
+              border: "2px solid #d7d8c8",
+              borderRadius: 12,
             }}
           >
             <p>Belum ada soal custom.</p>
+
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => navigate("/buat-soal")}
+            >
+              Buat Soal Pertama
+            </button>
           </div>
         ) : (
           questions.map((item, index) => {
@@ -98,31 +109,36 @@ export default function DaftarSoal() {
 
             const legacyCorrectIndex = hasCorrectIndex
               ? -1
-              : answers.findIndex((answer) => answer === item.correctAnswer);
+              : typeof item.correctAnswer === "number"
+                ? item.correctAnswer
+                : answers.indexOf(item.correctAnswer);
 
             return (
-              <div
+              <article
                 key={index}
                 style={{
-                  background: "rgba(15, 23, 42, 0.85)",
-                  border: "1px solid rgba(255,255,255,0.5)",
-                  borderRadius: "12px",
-                  padding: "20px",
-                  marginBottom: "18px",
+                  padding: 20,
+                  marginBottom: 18,
+                  background: "#fffaf0",
+                  border: "2px solid #d7d8c8",
+                  borderRadius: 12,
+                  boxShadow: "0 4px 0 rgba(38,57,75,0.10)",
                 }}
               >
-                <h2
+                <div
                   style={{
-                    fontSize: "24px",
-                    marginTop: "0",
-                    marginBottom: "16px",
-                    color: "#ffffff",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: "#4d8b70",
+                    marginBottom: 8,
                   }}
                 >
-                  {index + 1}. {item.question}
-                </h2>
+                  PERTANYAAN {index + 1}
+                </div>
 
-                <div>
+                <h2 style={{ marginTop: 0, fontSize: 20 }}>{item.question}</h2>
+
+                <div style={{ display: "grid", gap: 8 }}>
                   {answers.map((answer, answerIndex) => {
                     const isCorrect = hasCorrectIndex
                       ? answerIndex === item.correctAnswerIndex
@@ -132,13 +148,13 @@ export default function DaftarSoal() {
                       <div
                         key={answerIndex}
                         style={{
-                          padding: "10px 14px",
-                          marginBottom: "7px",
-                          borderRadius: "8px",
-                          backgroundColor: isCorrect ? "#d1fae5" : "#f3f4f6",
-                          color: isCorrect ? "#065f46" : "#111827",
-                          fontSize: "16px",
-                          fontWeight: isCorrect ? "600" : "400",
+                          padding: "11px 13px",
+                          borderRadius: 8,
+                          border: `1px solid ${
+                            isCorrect ? "#a9cba0" : "#d7d8c8"
+                          }`,
+                          background: isCorrect ? "#e4f1df" : "#fffdf7",
+                          color: "#26394b",
                         }}
                       >
                         <strong>
@@ -146,8 +162,16 @@ export default function DaftarSoal() {
                         </strong>{" "}
                         {answer}
                         {isCorrect && (
-                          <span style={{ marginLeft: "10px" }}>
-                            ✅ Jawaban benar
+                          <span
+                            style={{
+                              display: "block",
+                              marginTop: 4,
+                              color: "#356b54",
+                              fontSize: 12,
+                              fontWeight: 800,
+                            }}
+                          >
+                            ✓ Jawaban benar
                           </span>
                         )}
                       </div>
@@ -155,48 +179,40 @@ export default function DaftarSoal() {
                   })}
                 </div>
 
-                {/* Tombol Edit */}
-                <button
-                  type="button"
-                  onClick={() => handleEdit(index, item)}
+                <div
                   style={{
-                    display: "block",
-                    width: "100%",
-                    padding: "10px 16px",
-                    marginTop: "15px",
-                    fontSize: "15px",
-                    fontWeight: "600",
-                    backgroundColor: "#f59e0b",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
+                    display: "flex",
+                    gap: 10,
+                    marginTop: 16,
                   }}
                 >
-                  ✏️ Edit Soal
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(index, item)}
+                    style={{
+                      flex: 1,
+                      background: "#e4f1df",
+                      color: "#356b54",
+                      border: "1px solid #a9cba0",
+                    }}
+                  >
+                    Edit
+                  </button>
 
-                {/* Tombol Hapus */}
-                <button
-                  type="button"
-                  onClick={() => handleDelete(index)}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    padding: "10px 16px",
-                    marginTop: "10px",
-                    fontSize: "15px",
-                    fontWeight: "600",
-                    backgroundColor: "#dc2626",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                  }}
-                >
-                  🗑️ Hapus Soal
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(index)}
+                    style={{
+                      flex: 1,
+                      background: "#f8e8e4",
+                      color: "#a0443e",
+                      border: "1px solid #e8c5bd",
+                    }}
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </article>
             );
           })
         )}
@@ -204,22 +220,13 @@ export default function DaftarSoal() {
         <button
           type="button"
           onClick={() => navigate("/")}
+          className="primary-button"
           style={{
-            display: "block",
             width: "100%",
-            padding: "12px 20px",
-            marginTop: "25px",
-            marginBottom: "20px",
-            fontSize: "16px",
-            fontWeight: "600",
-            backgroundColor: "#3b82f6",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
+            marginTop: 8,
           }}
         >
-          🏠 Kembali ke Kuis
+          Kembali ke Kuis
         </button>
       </div>
     </div>

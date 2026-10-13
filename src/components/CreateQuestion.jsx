@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 export default function CreateQuestion() {
   const navigate = useNavigate();
   const location = useLocation();
-
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState(["", "", "", ""]);
   const [correctAnswer, setCorrectAnswer] = useState(null);
@@ -27,13 +26,10 @@ export default function CreateQuestion() {
       let correctIndex = editQuestion.correctAnswerIndex;
 
       if (correctIndex === undefined) {
-        if (typeof editQuestion.correctAnswer === "number") {
-          correctIndex = editQuestion.correctAnswer;
-        } else {
-          correctIndex = editQuestion.answers?.indexOf(
-            editQuestion.correctAnswer,
-          );
-        }
+        correctIndex =
+          typeof editQuestion.correctAnswer === "number"
+            ? editQuestion.correctAnswer
+            : editQuestion.answers?.indexOf(editQuestion.correctAnswer);
       }
 
       setCorrectAnswer(
@@ -52,12 +48,12 @@ export default function CreateQuestion() {
   }, [location.key, editMode, editQuestion]);
 
   const handleAnswerChange = (index, value) => {
-    const newAnswers = [...answers];
-    newAnswers[index] = value;
-    setAnswers(newAnswers);
+    setAnswers((previous) =>
+      previous.map((answer, i) => (i === index ? value : answer)),
+    );
 
-    setErrors((prev) => ({
-      ...prev,
+    setErrors((previous) => ({
+      ...previous,
       answers: "",
       submit: "",
     }));
@@ -104,7 +100,7 @@ export default function CreateQuestion() {
       const parsedData = savedData ? JSON.parse(savedData) : [];
 
       if (!Array.isArray(parsedData)) {
-        throw new Error("Data soal di localStorage tidak valid.");
+        throw new Error("Data soal tidak valid.");
       }
 
       let updatedQuestions;
@@ -151,30 +147,33 @@ export default function CreateQuestion() {
     }
   };
 
-  const handleBackToQuiz = () => {
-    navigate("/", { replace: true });
-  };
-
   return (
     <div
       className="quiz-container"
       style={{
-        maxWidth: "600px",
-        margin: "40px auto",
-        padding: "25px",
+        maxWidth: 600,
+        margin: "32px auto",
+        padding: 24,
+        width: "calc(100% - 24px)",
       }}
     >
-      <h2 style={{ textAlign: "center" }}>
-        {editMode ? "Edit Soal Custom" : "Buat Soal Custom"}
-      </h2>
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <div style={{ fontSize: 38 }}>🦕</div>
+
+        <h2>{editMode ? "Edit Soal" : "Buat Soal Custom"}</h2>
+
+        <p style={{ color: "#718096" }}>
+          Tambahkan pertanyaan ke koleksi kuismu.
+        </p>
+      </div>
 
       {success && (
         <p
           style={{
-            color: "#059669",
-            backgroundColor: "#d1fae5",
-            padding: "10px",
-            borderRadius: "8px",
+            color: "#356b54",
+            background: "#e4f1df",
+            padding: 12,
+            borderRadius: 8,
           }}
         >
           {success}
@@ -182,17 +181,16 @@ export default function CreateQuestion() {
       )}
 
       <form onSubmit={handleSubmit}>
-        <label>
-          <strong>Pertanyaan:</strong>
-        </label>
+        <label htmlFor="custom-question">Pertanyaan</label>
 
         <textarea
+          id="custom-question"
           value={question}
           onChange={(event) => {
             setQuestion(event.target.value);
 
-            setErrors((prev) => ({
-              ...prev,
+            setErrors((previous) => ({
+              ...previous,
               question: "",
               submit: "",
             }));
@@ -200,25 +198,14 @@ export default function CreateQuestion() {
             setSuccess("");
           }}
           placeholder="Masukkan pertanyaan..."
-          rows="4"
-          style={{
-            width: "100%",
-            marginTop: "8px",
-            marginBottom: "5px",
-            padding: "10px",
-            fontSize: "16px",
-            borderRadius: "8px",
-            border: "1px solid #ccc",
-          }}
+          rows={4}
         />
 
         {errors.question && (
-          <p style={{ color: "#dc2626", marginTop: "5px" }}>
-            {errors.question}
-          </p>
+          <p style={{ color: "#c85c54" }}>{errors.question}</p>
         )}
 
-        <strong>Pilihan Jawaban:</strong>
+        <strong>Pilihan jawaban</strong>
 
         {answers.map((answer, index) => (
           <div
@@ -226,20 +213,19 @@ export default function CreateQuestion() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "10px",
-              marginTop: "12px",
+              gap: 10,
             }}
           >
             <input
               type="radio"
               name="correctAnswer"
-              value={index}
+              aria-label={`Tandai pilihan ${index + 1} sebagai jawaban benar`}
               checked={correctAnswer === index}
               onChange={() => {
                 setCorrectAnswer(index);
 
-                setErrors((prev) => ({
-                  ...prev,
+                setErrors((previous) => ({
+                  ...previous,
                   correctAnswer: "",
                   submit: "",
                 }));
@@ -255,66 +241,35 @@ export default function CreateQuestion() {
                 handleAnswerChange(index, event.target.value)
               }
               placeholder={`Pilihan ${index + 1}`}
-              style={{
-                flex: 1,
-                padding: "10px",
-                fontSize: "16px",
-                borderRadius: "8px",
-                border: "1px solid #ccc",
-              }}
             />
           </div>
         ))}
 
-        {errors.answers && (
-          <p style={{ color: "#dc2626", marginTop: "5px" }}>{errors.answers}</p>
-        )}
+        {errors.answers && <p style={{ color: "#c85c54" }}>{errors.answers}</p>}
 
         {errors.correctAnswer && (
-          <p style={{ color: "#dc2626", marginTop: "5px" }}>
-            {errors.correctAnswer}
-          </p>
+          <p style={{ color: "#c85c54" }}>{errors.correctAnswer}</p>
         )}
 
-        {errors.submit && (
-          <p style={{ color: "#dc2626", marginTop: "5px" }}>{errors.submit}</p>
-        )}
+        {errors.submit && <p style={{ color: "#c85c54" }}>{errors.submit}</p>}
 
-        <p style={{ fontSize: "14px", color: "#666" }}>
-          Pilih radio button di sebelah pilihan yang merupakan jawaban benar.
+        <p style={{ fontSize: 13, color: "#718096" }}>
+          Pilih radio button di samping jawaban yang benar.
         </p>
 
         <button
           type="submit"
-          style={{
-            width: "100%",
-            marginTop: "20px",
-            padding: "12px",
-            fontSize: "16px",
-            backgroundColor: "#10b981",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-          }}
+          className="primary-button"
+          style={{ width: "100%" }}
         >
-          {editMode ? "Simpan Perubahan" : "Buat Soal"}
+          {editMode ? "Simpan Perubahan" : "Simpan Soal"}
         </button>
 
         <button
           type="button"
-          onClick={handleBackToQuiz}
-          style={{
-            width: "100%",
-            marginTop: "10px",
-            padding: "12px",
-            fontSize: "16px",
-            backgroundColor: "#6366f1",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-          }}
+          onClick={() => navigate("/")}
+          className="button-secondary"
+          style={{ width: "100%" }}
         >
           Kembali ke Kuis
         </button>
