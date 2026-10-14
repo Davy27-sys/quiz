@@ -14,6 +14,7 @@ import ResultScreen from "./components/ResultScreen";
 import LeaderboardScreen from "./components/LeaderboardScreen";
 import CreateQuestion from "./components/CreateQuestion";
 import DaftarSoal from "./components/DaftarSoal";
+import AdventureMap from "./AdventureMap";
 
 import "./App.css";
 
@@ -259,6 +260,10 @@ function MainQuiz() {
         />
 
         <nav className="home-navigation">
+          <Link to="/petualangan" className="secondary-button">
+            🦕 Peta Petualangan
+          </Link>
+
           <Link to="/leaderboard" className="secondary-button">
             🏆 Leaderboard
           </Link>
@@ -285,6 +290,8 @@ export default function App() {
         <Route path="/leaderboard" element={<LeaderboardScreen />} />
         <Route path="/buat-soal" element={<CreateQuestion />} />
         <Route path="/daftar-soal" element={<DaftarSoal />} />
+
+        <Route path="/petualangan" element={<AdventureMap />} />
       </Routes>
     </BrowserRouter>
   );

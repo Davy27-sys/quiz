@@ -1,0 +1,314 @@
+.adventure-page {
+  min-height: 100vh;
+  padding: 28px 18px 40px;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+  color: #244b3b;
+  background: linear-gradient(160deg, #dceef3, #e6f1ef, #e8efdf);
+}
+
+.adventure-page * {
+  box-sizing: border-box;
+}
+
+.adventure-container {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.adventure-back {
+  padding: 10px 15px;
+  border: 1px solid #47785f;
+  border-radius: 10px;
+  background: #fffaf0;
+  color: #356c55;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.adventure-back:hover {
+  background: #e8f0e5;
+  transform: translateY(-2px);
+}
+
+.adventure-header {
+  margin: 30px 0 24px;
+  text-align: center;
+}
+
+.adventure-eyebrow {
+  color: #648b72;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.adventure-header h1 {
+  margin: 10px 0;
+  color: #356c55;
+  font-size: clamp(25px, 5vw, 35px);
+}
+
+.adventure-header p {
+  margin: 0;
+  color: #647c76;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.adventure-stats {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.adventure-stat {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 230px;
+  padding: 14px 10px;
+  border: 1px solid #c5d9cd;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+
+.adventure-stat-icon {
+  font-size: 24px;
+}
+
+.adventure-stat strong,
+.adventure-stat small {
+  display: block;
+}
+
+.adventure-stat strong {
+  color: #356c55;
+  font-size: 13px;
+}
+
+.adventure-stat small {
+  margin-top: 5px;
+  color: #78877c;
+  font-size: 10px;
+}
+
+.adventure-map {
+  padding: 22px;
+  border: 1px solid #b7d0c1;
+  border-radius: 18px;
+  background: #eff6e8;
+  box-shadow: 4px 5px 0 rgba(36, 75, 59, 0.08);
+}
+
+.adventure-map-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.adventure-map-header h2 {
+  margin: 0;
+  color: #356c55;
+  font-size: 21px;
+}
+
+.adventure-map-header p {
+  margin: 8px 0 0;
+  color: #718477;
+  font-size: 12px;
+}
+
+.adventure-islands {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.adventure-island {
+  display: block;
+  width: 100%;
+  max-width: 370px;
+  padding: 16px;
+  border: 1.5px solid #47785f;
+  border-radius: 14px;
+  background: #fffaf0;
+  color: #244b3b;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 3px 4px 0 rgba(36, 75, 59, 0.08);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.adventure-island:hover {
+  transform: translateY(-3px);
+  box-shadow: 3px 7px 0 rgba(36, 75, 59, 0.12);
+}
+
+.adventure-island-content {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.adventure-dinosaur {
+  display: flex;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #e5efe3;
+  font-size: 29px;
+}
+
+.adventure-island-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.adventure-level {
+  color: #789080;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.adventure-island-info h3 {
+  margin: 5px 0;
+  color: #356c55;
+  font-size: 15px;
+}
+
+.adventure-island-info p {
+  margin: 0;
+  color: #7a877d;
+  font-size: 11px;
+}
+
+.adventure-island-symbol {
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.adventure-play {
+  display: block;
+  margin-top: 14px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #47785f;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.adventure-island:hover .adventure-play {
+  background: #356348;
+}
+
+.adventure-path {
+  display: flex;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  color: #8aab94;
+  font-size: 18px;
+  letter-spacing: 5px;
+}
+
+.adventure-map-footer {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid #c4d9cb;
+  color: #657c6c;
+  font-size: 12px;
+  line-height: 1.8;
+  text-align: center;
+}
+
+.adventure-start {
+  display: block;
+  width: 100%;
+  max-width: 370px;
+  margin: 20px auto 0;
+  padding: 14px;
+  border: none;
+  border-radius: 11px;
+  background: #47785f;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.adventure-start:hover {
+  background: #356348;
+  transform: translateY(-2px);
+}
+
+.adventure-back:focus-visible,
+.adventure-island:focus-visible,
+.adventure-start:focus-visible {
+  outline: 3px solid #8db49a;
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .adventure-page {
+    padding: 18px 12px 28px;
+  }
+
+  .adventure-header {
+    margin-top: 24px;
+  }
+
+  .adventure-map {
+    padding: 16px 11px;
+  }
+
+  .adventure-island {
+    padding: 13px;
+  }
+
+  .adventure-island-content {
+    gap: 10px;
+  }
+
+  .adventure-dinosaur {
+    width: 47px;
+    height: 47px;
+    font-size: 25px;
+  }
+
+  .adventure-island-info h3 {
+    font-size: 13px;
+  }
+
+  .adventure-stat {
+    gap: 6px;
+    padding: 10px 6px;
+  }
+
+  .adventure-stat-icon {
+    font-size: 19px;
+  }
+
+  .adventure-stat strong {
+    font-size: 11px;
+  }
+
+  .adventure-stat small {
+    font-size: 9px;
+  }
+}
