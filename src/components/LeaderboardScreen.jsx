@@ -6,6 +6,10 @@ export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = () => {
     try {
       const saved = localStorage.getItem("quizHistory");
 
@@ -26,7 +30,18 @@ export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
       console.error("Gagal membaca leaderboard:", error);
       setHistory([]);
     }
-  }, []);
+  };
+
+  const handleDeleteHistory = () => {
+    const confirmDelete = window.confirm(
+      "Yakin ingin menghapus semua history leaderboard?",
+    );
+
+    if (!confirmDelete) return;
+
+    localStorage.removeItem("quizHistory");
+    setHistory([]);
+  };
 
   return (
     <div
@@ -56,21 +71,45 @@ export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
           Belum ada skor. Yuk, mulai bermain!
         </div>
       ) : (
-        <ol style={{ paddingLeft: 26 }}>
-          {history.map((item, index) => (
-            <li key={index}>
-              <strong>
-                {index + 1}. {item.name}
-              </strong>
+        <>
+          <ol style={{ paddingLeft: 26 }}>
+            {history.map((item, index) => (
+              <li
+                key={`${item.name}-${item.date}-${index}`}
+                style={{ marginBottom: 16 }}
+              >
+                <strong>
+                  {index + 1}. {item.name}
+                </strong>
 
-              <div style={{ marginTop: 6 }}>
-                Skor: {item.score} / {item.total || 5}
-              </div>
+                <div style={{ marginTop: 6 }}>
+                  Skor: {item.score} / {item.total || 5}
+                </div>
 
-              <small style={{ color: "#718096" }}>{item.date}</small>
-            </li>
-          ))}
-        </ol>
+                <small style={{ color: "#718096" }}>{item.date}</small>
+              </li>
+            ))}
+          </ol>
+
+          <button
+            type="button"
+            onClick={handleDeleteHistory}
+            style={{
+              width: "100%",
+              marginTop: 8,
+              padding: "12px 16px",
+              border: "none",
+              borderRadius: 8,
+              background: "#dc2626",
+              color: "#ffffff",
+              fontSize: 15,
+              fontWeight: "bold",
+              cursor: "pointer",
+            }}
+          >
+            🗑️ Hapus History
+          </button>
+        </>
       )}
 
       <button
