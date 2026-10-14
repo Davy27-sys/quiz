@@ -9,31 +9,45 @@ export default function QuizScreen({
   handleNextQuestion,
 }) {
   const [timeLeft, setTimeLeft] = useState(15);
+  const [showResult, setShowResult] = useState(false);
+  const currentQuestion = questions?.[currentIndex];
 
   useEffect(() => {
     setTimeLeft(15);
+    setShowResult(false);
   }, [currentIndex]);
 
   useEffect(() => {
-    if (selectedAnswer !== null) return;
-
-    if (timeLeft <= 0) {
-      handleNextQuestion(true);
-      return;
-    }
+    if (selectedAnswer !== null || timeLeft <= 0) return;
 
     const timer = setTimeout(() => {
-      setTimeLeft((prev) => prev - 1);
+      setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [timeLeft, selectedAnswer, currentIndex, handleNextQuestion]);
+  }, [timeLeft, selectedAnswer]);
 
-  if (!questions?.[currentIndex]) {
+  useEffect(() => {
+    if (selectedAnswer === null || !currentQuestion) return;
+
+    setShowResult(false);
+
+    const delay = setTimeout(() => {
+      setShowResult(true);
+    }, 3000);
+
+    return () => clearTimeout(delay);
+  }, [selectedAnswer, currentIndex]);
+
+  if (!currentQuestion) {
     return <div className="quiz-container">Memuat soal...</div>;
   }
 
-  const currentQuestion = questions[currentIndex];
+  const chosenAnswer =
+    selectedAnswer === null ? null : currentQuestion.answers[selectedAnswer];
+
+  const isCorrect =
+    selectedAnswer !== null && chosenAnswer === currentQuestion.correctAnswer;
 
   return (
     <div className="quiz-container">
@@ -96,21 +110,94 @@ export default function QuizScreen({
         <strong>{timeLeft} detik</strong>
       </div>
 
+      {timeLeft === 0 && selectedAnswer === null && (
+        <p style={{ color: "#b45309", textAlign: "center" }}>
+          Waktu habis! Kamu bisa lanjut ke soal berikutnya.
+        </p>
+      )}
+
       <div className="answers-container">
-        {currentQuestion.answers.map((answer, index) => (
-          <AnswerButton
-            key={index}
-            answer={answer}
-            isSelected={selectedAnswer === index}
-            onClick={() => setSelectedAnswer(index)}
-          />
-        ))}
+        {currentQuestion.answers.map((answer, index) => {
+          const isSelected = selectedAnswer === index;
+          const isCorrectAnswer = answer === currentQuestion.correctAnswer;
+
+          let backgroundColor = "transparent";
+          let borderColor = "transparent";
+
+          if (showResult && isCorrectAnswer) {
+            backgroundColor = "#d1fae5";
+            borderColor = "#16a34a";
+          } else if (showResult && isSelected && !isCorrectAnswer) {
+            backgroundColor = "#fee2e2";
+            borderColor = "#dc2626";
+          }
+
+          return (
+            <div
+              key={index}
+              style={{
+                borderRadius: 12,
+                marginBottom: 10,
+                backgroundColor,
+                border: `2px solid ${borderColor}`,
+                transition: "background-color 0.3s ease",
+              }}
+            >
+              <AnswerButton
+                answer={answer}
+                isSelected={isSelected}
+                onClick={() => {
+                  if (selectedAnswer === null && timeLeft > 0) {
+                    setSelectedAnswer(index);
+                  }
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
+
+      {selectedAnswer !== null && showResult && (
+        <div
+          style={{
+            padding: 12,
+            marginTop: 12,
+            marginBottom: 8,
+            borderRadius: 8,
+            textAlign: "center",
+            fontWeight: "bold",
+            color: isCorrect ? "#166534" : "#b91c1c",
+            background: isCorrect ? "#dcfce7" : "#fee2e2",
+          }}
+        >
+          {isCorrect
+            ? "🎉 Benar! Hebat!"
+            : `❌ Kurang tepat! Jawaban benar: ${currentQuestion.correctAnswer}`}
+        </div>
+      )}
+
+      {selectedAnswer !== null && !showResult && (
+        <div
+          style={{
+            textAlign: "center",
+            padding: 12,
+            marginTop: 12,
+            color: "#365846",
+            background: "#edf3e6",
+            borderRadius: 8,
+          }}
+        >
+          ⏳ Memeriksa jawaban...
+        </div>
+      )}
 
       <button
         type="button"
-        onClick={() => handleNextQuestion()}
-        disabled={selectedAnswer === null}
+        onClick={() => handleNextQuestion(true)}
+        disabled={
+          (selectedAnswer === null && timeLeft > 0) ||
+          (selectedAnswer !== null && !showResult)
+        }
         className="primary-button"
         style={{
           width: "100%",

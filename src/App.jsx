@@ -23,6 +23,17 @@ function decodeHTML(html) {
   return textarea.value;
 }
 
+function shuffleArray(array) {
+  const shuffled = [...array];
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled;
+}
+
 function MainQuiz() {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -45,62 +56,105 @@ function MainQuiz() {
   }, [cooldown]);
 
   const fetchTriviaQuestions = async () => {
+    const response = await fetch(
+      "https://opentdb.com/api.php?amount=5&type=multiple",
+    );
+
+    if (response.status === 429) {
+      setCooldown(10);
+      throw new Error(
+        "Terlalu banyak permintaan. Tunggu beberapa detik lalu coba lagi.",
+      );
+    }
+
+    if (!response.ok) {
+      throw new Error("Gagal mengambil soal dari server.");
+    }
+
+    const data = await response.json();
+
+    if (data.response_code !== 0 || !data.results?.length) {
+      throw new Error("Soal belum tersedia. Coba lagi nanti.");
+    }
+
+    return data.results.map((item) => {
+      const correctAnswer = decodeHTML(item.correct_answer);
+
+      const answers = shuffleArray([
+        ...item.incorrect_answers.map((answer) => decodeHTML(answer)),
+        correctAnswer,
+      ]);
+
+      return {
+        question: decodeHTML(item.question),
+        answers,
+        correctAnswer,
+      };
+    });
+  };
+
+  const fetchMixedQuestions = async () => {
     if (cooldown > 0) return;
 
     setLoading(true);
     setErrorMessage("");
 
     try {
-      const response = await fetch(
-        "https://opentdb.com/api.php?amount=5&type=multiple",
-      );
+      const apiQuestions = await fetchTriviaQuestions();
 
-      if (response.status === 429) {
-        setCooldown(10);
-        throw new Error(
-          "Terlalu banyak permintaan. Tunggu beberapa detik lalu coba lagi.",
-        );
-      }
+      const savedQuestions = localStorage.getItem("custom_questions");
+      let customQuestions = [];
 
-      if (!response.ok) {
-        throw new Error("Gagal mengambil soal dari server.");
-      }
+      if (savedQuestions) {
+        try {
+          const parsedQuestions = JSON.parse(savedQuestions);
 
-      const data = await response.json();
-
-      if (data.response_code !== 0 || !data.results?.length) {
-        throw new Error("Soal belum tersedia. Coba lagi nanti.");
-      }
-
-      const formattedQuestions = data.results.map((item) => {
-        const correctAnswer = decodeHTML(item.correct_answer);
-
-        const answers = [
-          ...item.incorrect_answers.map((answer) => decodeHTML(answer)),
-          correctAnswer,
-        ];
-
-        for (let i = answers.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [answers[i], answers[j]] = [answers[j], answers[i]];
+          if (Array.isArray(parsedQuestions)) {
+            customQuestions = parsedQuestions;
+          }
+        } catch (error) {
+          console.error("Data soal custom tidak valid:", error);
         }
+      }
 
-        return {
-          question: decodeHTML(item.question),
-          answers,
-          correctAnswer,
-        };
-      });
+      const convertedCustomQuestions = customQuestions
+        .filter(
+          (question) =>
+            question &&
+            typeof question.question === "string" &&
+            Array.isArray(question.answers) &&
+            question.answers.length === 4 &&
+            Number.isInteger(question.correctAnswerIndex) &&
+            question.correctAnswerIndex >= 0 &&
+            question.correctAnswerIndex < question.answers.length &&
+            question.answers.every((answer) => typeof answer === "string"),
+        )
+        .map((question) => {
+          const correctAnswer = question.answers[question.correctAnswerIndex];
 
-      setQuestions(formattedQuestions);
+          const answers = shuffleArray(question.answers);
+
+          return {
+            question: question.question,
+            answers,
+            correctAnswer,
+          };
+        });
+
+      const combinedQuestions = [...apiQuestions, ...convertedCustomQuestions];
+
+      const mixedQuestions = shuffleArray(combinedQuestions);
+
+      if (mixedQuestions.length === 0) {
+        throw new Error("Soal belum tersedia.");
+      }
+
+      setQuestions(mixedQuestions);
       setCurrentIndex(0);
       setScore(0);
       setSelectedAnswer(null);
 
-      sessionStorage.setItem(
-        "quiz_questions",
-        JSON.stringify(formattedQuestions),
-      );
+      sessionStorage.setItem("quiz_questions", JSON.stringify(mixedQuestions));
       sessionStorage.setItem("currentIndex", "0");
       sessionStorage.setItem("score", "0");
     } catch (error) {
@@ -113,7 +167,7 @@ function MainQuiz() {
   };
 
   useEffect(() => {
-    fetchTriviaQuestions();
+    fetchMixedQuestions();
   }, []);
 
   const handleNextQuestion = useCallback(
@@ -184,7 +238,7 @@ function MainQuiz() {
           <ErrorView
             errorMessage={errorMessage || "Soal belum tersedia."}
             cooldown={cooldown}
-            onRetry={fetchTriviaQuestions}
+            onRetry={fetchMixedQuestions}
             buttonStyle={buttonStyle}
           />
         </div>
