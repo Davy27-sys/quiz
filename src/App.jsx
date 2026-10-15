@@ -43,6 +43,7 @@ function MainQuiz() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [cooldown, setCooldown] = useState(0);
+  const [isFinishing, setIsFinishing] = useState(false);
 
   const navigate = useNavigate();
 
@@ -99,6 +100,7 @@ function MainQuiz() {
 
     setLoading(true);
     setErrorMessage("");
+    setIsFinishing(false);
 
     try {
       const apiQuestions = await fetchTriviaQuestions();
@@ -173,6 +175,7 @@ function MainQuiz() {
 
   const handleNextQuestion = useCallback(
     (force = false) => {
+      if (isFinishing) return;
       if (!force && selectedAnswer === null) return;
 
       const currentQuestion = questions[currentIndex];
@@ -200,19 +203,23 @@ function MainQuiz() {
 
         sessionStorage.setItem("currentIndex", String(nextIndex));
       } else {
+        setIsFinishing(true);
+
         sessionStorage.removeItem("quiz_questions");
         sessionStorage.removeItem("currentIndex");
         sessionStorage.removeItem("score");
 
-        navigate("/result", {
-          state: {
-            score: newScore,
-            total: questions.length,
-          },
-        });
+        setTimeout(() => {
+          navigate("/result", {
+            state: {
+              score: newScore,
+              total: questions.length,
+            },
+          });
+        }, 2200);
       }
     },
-    [selectedAnswer, questions, currentIndex, score, navigate],
+    [isFinishing, selectedAnswer, questions, currentIndex, score, navigate],
   );
 
   const buttonStyle = {
@@ -257,6 +264,7 @@ function MainQuiz() {
           selectedAnswer={selectedAnswer}
           setSelectedAnswer={setSelectedAnswer}
           handleNextQuestion={handleNextQuestion}
+          isFinishing={isFinishing}
         />
 
         <nav className="home-navigation">
@@ -276,6 +284,26 @@ function MainQuiz() {
             📚 Daftar Soal
           </Link>
         </nav>
+
+        {isFinishing && (
+          <div className="dino-finish-overlay">
+            <div className="dino-finish-card">
+              <div className="dino-stars">✦ ✧ ★ ✧ ✦</div>
+
+              <div className="dino-finish-sprite">🦖</div>
+
+              <h2>Petualangan Selesai!</h2>
+
+              <p>Yeay! Kamu berhasil menyelesaikan kuis!</p>
+
+              <div className="dino-finish-loading">
+                <span />
+              </div>
+
+              <small>Menyiapkan hasil kuis...</small>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
@@ -290,7 +318,6 @@ export default function App() {
         <Route path="/leaderboard" element={<LeaderboardScreen />} />
         <Route path="/buat-soal" element={<CreateQuestion />} />
         <Route path="/daftar-soal" element={<DaftarSoal />} />
-
         <Route path="/petualangan" element={<AdventureMap />} />
       </Routes>
     </BrowserRouter>

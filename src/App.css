@@ -775,3 +775,272 @@ button:focus-visible {
     font-size: 19px;
   }
 }
+
+.home-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  max-width: 760px;
+  margin: 24px auto 0;
+}
+
+.home-navigation a,
+.home-navigation button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 58px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 800;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .home-navigation {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .home-navigation a,
+  .home-navigation button {
+    width: 100%;
+    min-width: 0;
+    min-height: 54px;
+    padding: 12px 8px;
+    font-size: 14px;
+    white-space: normal;
+  }
+}
+
+.quiz-container,
+.quiz-card,
+.dino-card,
+.custom-question-card {
+  animation: fadeSlideUp 0.5s ease both;
+}
+
+.primary-button,
+.secondary-button,
+.danger-button,
+.answer-option,
+.answers-container button,
+.quiz-answer,
+.home-navigation a,
+.home-navigation button {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.primary-button:hover:not(:disabled),
+.secondary-button:hover:not(:disabled),
+.danger-button:hover:not(:disabled),
+.answer-option:hover:not(:disabled),
+.answers-container button:hover:not(:disabled),
+.quiz-answer:hover:not(:disabled),
+.home-navigation a:hover,
+.home-navigation button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 12px rgba(38, 57, 75, 0.12);
+}
+
+.primary-button:active:not(:disabled),
+.secondary-button:active:not(:disabled),
+.danger-button:active:not(:disabled),
+.answer-option:active:not(:disabled),
+.answers-container button:active:not(:disabled),
+.quiz-answer:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.answers-container button,
+.quiz-answer {
+  animation: answerPop 0.35s ease both;
+}
+
+.answers-container button:nth-child(2),
+.quiz-answer:nth-child(2) {
+  animation-delay: 0.05s;
+}
+
+.answers-container button:nth-child(3),
+.quiz-answer:nth-child(3) {
+  animation-delay: 0.1s;
+}
+
+.answers-container button:nth-child(4),
+.quiz-answer:nth-child(4) {
+  animation-delay: 0.15s;
+}
+
+.dino-run {
+  animation: dino-hop 0.7s steps(2) infinite;
+}
+
+.dino-leg {
+  animation: dino-legs 0.35s steps(2) infinite;
+}
+
+.quiz-timer-progress {
+  transition: width 0.3s linear;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes answerPop {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quiz-container,
+  .quiz-card,
+  .dino-card,
+  .custom-question-card,
+  .answers-container button,
+  .quiz-answer,
+  .dino-run,
+  .dino-leg {
+    animation: none !important;
+  }
+
+  button,
+  .quiz-timer-progress {
+    transition: none !important;
+  }
+}
+
+.dino-quiz-icon {
+  display: inline-block;
+  font-size: 44px;
+  transform-origin: center bottom;
+  animation: dinoBounce 1.5s ease-in-out infinite;
+}
+
+.quiz-container {
+  animation: quizEntrance 0.55s ease-out both;
+}
+
+.answers-container > div {
+  animation: answerEntrance 0.35s ease-out both;
+}
+
+.answers-container > div:nth-child(2) {
+  animation-delay: 0.05s;
+}
+
+.answers-container > div:nth-child(3) {
+  animation-delay: 0.1s;
+}
+
+.answers-container > div:nth-child(4) {
+  animation-delay: 0.15s;
+}
+
+.answers-container > div > button {
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.answers-container > div > button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.timer-danger {
+  animation: timerPulse 0.8s ease-in-out infinite alternate;
+}
+
+.primary-button {
+  transition:
+    transform 0.2s ease,
+    filter 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.primary-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 rgba(38, 57, 75, 0.12);
+}
+
+@keyframes dinoBounce {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+
+  50% {
+    transform: translateY(-7px) rotate(-5deg);
+  }
+}
+
+@keyframes quizEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes answerEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes timerPulse {
+  from {
+    box-shadow: 0 0 0 rgba(200, 92, 84, 0);
+  }
+
+  to {
+    box-shadow: 0 0 12px rgba(200, 92, 84, 0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dino-quiz-icon,
+  .quiz-container,
+  .answers-container > div,
+  .timer-danger {
+    animation: none !important;
+  }
+}

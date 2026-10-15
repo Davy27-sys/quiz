@@ -7,9 +7,11 @@ export default function QuizScreen({
   selectedAnswer,
   setSelectedAnswer,
   handleNextQuestion,
+  isFinishing,
 }) {
   const [timeLeft, setTimeLeft] = useState(15);
   const [showResult, setShowResult] = useState(false);
+
   const currentQuestion = questions?.[currentIndex];
 
   useEffect(() => {
@@ -18,14 +20,16 @@ export default function QuizScreen({
   }, [currentIndex]);
 
   useEffect(() => {
-    if (selectedAnswer !== null || timeLeft <= 0) return;
+    if (selectedAnswer !== null || timeLeft <= 0 || isFinishing) {
+      return;
+    }
 
     const timer = setTimeout(() => {
       setTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [timeLeft, selectedAnswer]);
+  }, [timeLeft, selectedAnswer, isFinishing]);
 
   useEffect(() => {
     if (selectedAnswer === null || !currentQuestion) return;
@@ -52,7 +56,7 @@ export default function QuizScreen({
   return (
     <div className="quiz-container">
       <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div style={{ fontSize: 36, marginBottom: 8 }}>🦖</div>
+        <div className="dino-quiz-icon">🦖</div>
 
         <h2 className="quiz-title">Dino Quiz</h2>
 
@@ -147,7 +151,7 @@ export default function QuizScreen({
                 answer={answer}
                 isSelected={isSelected}
                 onClick={() => {
-                  if (selectedAnswer === null && timeLeft > 0) {
+                  if (selectedAnswer === null && timeLeft > 0 && !isFinishing) {
                     setSelectedAnswer(index);
                   }
                 }}
@@ -195,6 +199,7 @@ export default function QuizScreen({
         type="button"
         onClick={() => handleNextQuestion(true)}
         disabled={
+          isFinishing ||
           (selectedAnswer === null && timeLeft > 0) ||
           (selectedAnswer !== null && !showResult)
         }
@@ -204,9 +209,11 @@ export default function QuizScreen({
           marginTop: 12,
         }}
       >
-        {currentIndex === questions.length - 1
-          ? "Selesaikan Kuis →"
-          : "Soal Berikutnya →"}
+        {isFinishing
+          ? "🦖 Petualangan Selesai..."
+          : currentIndex === questions.length - 1
+            ? "Selesaikan Kuis →"
+            : "Soal Berikutnya →"}
       </button>
     </div>
   );
