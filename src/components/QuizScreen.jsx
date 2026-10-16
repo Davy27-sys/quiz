@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import AnswerButton from "./AnswerButton";
 
 export default function QuizScreen({
@@ -11,12 +11,59 @@ export default function QuizScreen({
 }) {
   const [timeLeft, setTimeLeft] = useState(15);
   const [showResult, setShowResult] = useState(false);
-
+  const audioContextRef = useRef(null);
+  const playedSoundRef = useRef(false);
   const currentQuestion = questions?.[currentIndex];
+  const playSound = (isCorrect) => {
+    try {
+      const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+      if (!AudioContextClass) return;
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContextClass();
+      }
+
+      const audioContext = audioContextRef.current;
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(
+        isCorrect ? 880 : 220,
+        audioContext.currentTime,
+      );
+
+      gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.18,
+        audioContext.currentTime + 0.03,
+      );
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.0001,
+        audioContext.currentTime + 0.25,
+      );
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.26);
+    } catch (error) {
+      console.warn("Efek suara tidak dapat diputar:", error);
+    }
+  };
 
   useEffect(() => {
     setTimeLeft(15);
     setShowResult(false);
+    playedSoundRef.current = false;
   }, [currentIndex]);
 
   useEffect(() => {
@@ -35,6 +82,14 @@ export default function QuizScreen({
     if (selectedAnswer === null || !currentQuestion) return;
 
     setShowResult(false);
+
+    const isCorrect =
+      currentQuestion.answers[selectedAnswer] === currentQuestion.correctAnswer;
+
+    if (!playedSoundRef.current) {
+      playedSoundRef.current = true;
+      playSound(isCorrect);
+    }
 
     const delay = setTimeout(() => {
       setShowResult(true);
