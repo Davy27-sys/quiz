@@ -13,7 +13,9 @@ export default function QuizScreen({
   const [showResult, setShowResult] = useState(false);
   const audioContextRef = useRef(null);
   const playedSoundRef = useRef(false);
+
   const currentQuestion = questions?.[currentIndex];
+
   const playSound = (isCorrect) => {
     try {
       const AudioContextClass =
@@ -78,17 +80,24 @@ export default function QuizScreen({
     return () => clearTimeout(timer);
   }, [timeLeft, selectedAnswer, isFinishing]);
 
+  const chosenAnswer =
+    selectedAnswer === null ? null : currentQuestion?.answers[selectedAnswer];
+
+  const isCorrect =
+    chosenAnswer !== null &&
+    chosenAnswer?.text === currentQuestion?.correctAnswer;
+
   useEffect(() => {
     if (selectedAnswer === null || !currentQuestion) return;
 
     setShowResult(false);
 
-    const isCorrect =
-      currentQuestion.answers[selectedAnswer] === currentQuestion.correctAnswer;
+    const answer = currentQuestion.answers[selectedAnswer];
+    const correct = answer?.text === currentQuestion.correctAnswer;
 
     if (!playedSoundRef.current) {
       playedSoundRef.current = true;
-      playSound(isCorrect);
+      playSound(correct);
     }
 
     const delay = setTimeout(() => {
@@ -101,12 +110,6 @@ export default function QuizScreen({
   if (!currentQuestion) {
     return <div className="quiz-container">Memuat soal...</div>;
   }
-
-  const chosenAnswer =
-    selectedAnswer === null ? null : currentQuestion.answers[selectedAnswer];
-
-  const isCorrect =
-    selectedAnswer !== null && chosenAnswer === currentQuestion.correctAnswer;
 
   return (
     <div className="quiz-container">
@@ -178,7 +181,7 @@ export default function QuizScreen({
       <div className="answers-container">
         {currentQuestion.answers.map((answer, index) => {
           const isSelected = selectedAnswer === index;
-          const isCorrectAnswer = answer === currentQuestion.correctAnswer;
+          const isCorrectAnswer = answer.text === currentQuestion.correctAnswer;
 
           let backgroundColor = "transparent";
           let borderColor = "transparent";
@@ -193,7 +196,7 @@ export default function QuizScreen({
 
           return (
             <div
-              key={index}
+              key={answer.id ?? index}
               style={{
                 borderRadius: 12,
                 marginBottom: 10,
@@ -203,7 +206,7 @@ export default function QuizScreen({
               }}
             >
               <AnswerButton
-                answer={answer}
+                answer={answer.text}
                 isSelected={isSelected}
                 onClick={() => {
                   if (selectedAnswer === null && timeLeft > 0 && !isFinishing) {
@@ -229,24 +232,7 @@ export default function QuizScreen({
             background: isCorrect ? "#dcfce7" : "#fee2e2",
           }}
         >
-          {isCorrect
-            ? "🎉 Benar! Hebat!"
-            : `❌ Kurang tepat! Jawaban benar: ${currentQuestion.correctAnswer}`}
-        </div>
-      )}
-
-      {selectedAnswer !== null && !showResult && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: 12,
-            marginTop: 12,
-            color: "#365846",
-            background: "#edf3e6",
-            borderRadius: 8,
-          }}
-        >
-          ⏳ Memeriksa jawaban...
+          {isCorrect ? "🎉 Benar! Hebat!" : "❌ Kurang tepat! Tetap semangat!"}
         </div>
       )}
 

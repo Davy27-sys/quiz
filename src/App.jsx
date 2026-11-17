@@ -18,12 +18,6 @@ import AdventureMap from "./AdventureMap";
 
 import "./App.css";
 
-function decodeHTML(html) {
-  const textarea = document.createElement("textarea");
-  textarea.innerHTML = html;
-  return textarea.value;
-}
-
 function shuffleArray(array) {
   const shuffled = [...array];
 
@@ -42,115 +36,51 @@ function MainQuiz() {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [cooldown, setCooldown] = useState(0);
   const [isFinishing, setIsFinishing] = useState(false);
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (cooldown <= 0) return;
-
-    const interval = setInterval(() => {
-      setCooldown((previous) => Math.max(previous - 1, 0));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [cooldown]);
-
-  const fetchTriviaQuestions = async () => {
-    const response = await fetch(
-      "https://opentdb.com/api.php?amount=5&type=multiple",
-    );
-
-    if (response.status === 429) {
-      setCooldown(10);
-      throw new Error(
-        "Terlalu banyak permintaan. Tunggu beberapa detik lalu coba lagi.",
-      );
-    }
-
-    if (!response.ok) {
-      throw new Error("Gagal mengambil soal dari server.");
-    }
-
-    const data = await response.json();
-
-    if (data.response_code !== 0 || !data.results?.length) {
-      throw new Error("Soal belum tersedia. Coba lagi nanti.");
-    }
-
-    return data.results.map((item) => {
-      const correctAnswer = decodeHTML(item.correct_answer);
-
-      const answers = shuffleArray([
-        ...item.incorrect_answers.map((answer) => decodeHTML(answer)),
-        correctAnswer,
-      ]);
-
-      return {
-        question: decodeHTML(item.question),
-        answers,
-        correctAnswer,
-      };
-    });
-  };
-
-  const fetchMixedQuestions = async () => {
-    if (cooldown > 0) return;
-
+  const fetchQuestions = useCallback(async () => {
     setLoading(true);
     setErrorMessage("");
     setIsFinishing(false);
 
     try {
-      const apiQuestions = await fetchTriviaQuestions();
+      const response = await fetch("http://localhost:3001/soal");
 
-      const savedQuestions = localStorage.getItem("custom_questions");
-      let customQuestions = [];
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil soal. Status: ${response.status}`);
+      }
 
-      if (savedQuestions) {
-        try {
-          const parsedQuestions = JSON.parse(savedQuestions);
+      const data = await response.json();
 
-          if (Array.isArray(parsedQuestions)) {
-            customQuestions = parsedQuestions;
-          }
-        } catch (error) {
-          console.error("Data soal custom tidak valid:", error);
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("Soal belum tersedia di database.");
+      }
+
+      const backendQuestions = data.map((item) => {
+        if (
+          !Array.isArray(item.jawaban) ||
+          item.jawaban.length < 2 ||
+          !item.jawabanBenar
+        ) {
+          throw new Error(`Format soal ID ${item.id} tidak valid.`);
         }
-      }
 
-      const convertedCustomQuestions = customQuestions
-        .filter(
-          (question) =>
-            question &&
-            typeof question.question === "string" &&
-            Array.isArray(question.answers) &&
-            question.answers.length === 4 &&
-            Number.isInteger(question.correctAnswerIndex) &&
-            question.correctAnswerIndex >= 0 &&
-            question.correctAnswerIndex < question.answers.length &&
-            question.answers.every((answer) => typeof answer === "string"),
-        )
-        .map((question) => {
-          const correctAnswer = question.answers[question.correctAnswerIndex];
+        return {
+          id: item.id,
+          question: item.pertanyaan,
+          answers: shuffleArray(
+            item.jawaban.map((option) => ({
+              id: option.opsi_id,
+              text: option.teks_opsi,
+            })),
+          ),
+          correctAnswer: item.jawabanBenar,
+        };
+      });
 
-          const answers = shuffleArray(question.answers);
-
-          return {
-            question: question.question,
-            answers,
-            correctAnswer,
-          };
-        });
-
-      const combinedQuestions = [...apiQuestions, ...convertedCustomQuestions];
-
-      const mixedQuestions = shuffleArray(combinedQuestions);
-
-      if (mixedQuestions.length === 0) {
-        throw new Error("Soal belum tersedia.");
-      }
+      const mixedQuestions = shuffleArray(backendQuestions);
 
       setQuestions(mixedQuestions);
       setCurrentIndex(0);
@@ -161,17 +91,17 @@ function MainQuiz() {
       sessionStorage.setItem("currentIndex", "0");
       sessionStorage.setItem("score", "0");
     } catch (error) {
-      setErrorMessage(
-        error.message || "Terjadi kesalahan saat mengambil soal.",
-      );
+      console.error("Gagal mengambil soal dari backend:", error);
+      setErrorMessage(error.message || "Tidak dapat terhubung ke backend.");
+      setQuestions([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchMixedQuestions();
-  }, []);
+    fetchQuestions();
+  }, [fetchQuestions]);
 
   const handleNextQuestion = useCallback(
     (force = false) => {
@@ -188,7 +118,8 @@ function MainQuiz() {
           : currentQuestion.answers[selectedAnswer];
 
       const isCorrect =
-        chosenAnswer !== null && chosenAnswer === currentQuestion.correctAnswer;
+        chosenAnswer !== null &&
+        chosenAnswer.text === currentQuestion.correctAnswer;
 
       const newScore = isCorrect ? score + 1 : score;
 
@@ -233,7 +164,7 @@ function MainQuiz() {
     return (
       <main className="app-shell">
         <div className="quiz-layout">
-          <LoadingView message="Memuat soal..." />
+          <LoadingView message="Memuat soal dari backend..." />
         </div>
       </main>
     );
@@ -245,8 +176,7 @@ function MainQuiz() {
         <div className="quiz-layout">
           <ErrorView
             errorMessage={errorMessage || "Soal belum tersedia."}
-            cooldown={cooldown}
-            onRetry={fetchMixedQuestions}
+            onRetry={fetchQuestions}
             buttonStyle={buttonStyle}
           />
         </div>
