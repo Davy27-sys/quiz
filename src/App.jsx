@@ -34,6 +34,11 @@ function MainQuiz() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
+
+  // Data untuk dikirim ke backend
+  const [quizAnswers, setQuizAnswers] = useState([]);
+  const [quizCategoryId, setQuizCategoryId] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [isFinishing, setIsFinishing] = useState(false);
@@ -49,7 +54,9 @@ function MainQuiz() {
       const response = await fetch("http://localhost:3001/soal");
 
       if (!response.ok) {
-        throw new Error(`Gagal mengambil soal. Status: ${response.status}`);
+        throw new Error(
+          `Gagal mengambil soal dari server. Status: ${response.status}`,
+        );
       }
 
       const data = await response.json();
@@ -67,8 +74,14 @@ function MainQuiz() {
           throw new Error(`Format soal ID ${item.id} tidak valid.`);
         }
 
+        if (!item.kategori_id) {
+          throw new Error(`Kategori soal ID ${item.id} tidak valid.`);
+        }
+
         return {
           id: item.id,
+          kategori_id: item.kategori_id,
+          kategori: item.kategori,
           question: item.pertanyaan,
           answers: shuffleArray(
             item.jawaban.map((option) => ({
@@ -80,20 +93,47 @@ function MainQuiz() {
         };
       });
 
+      // Backend mengharuskan satu kategori dalam satu sesi kuis.
+      const categoryId = backendQuestions[0].kategori_id;
+
+      const sameCategory = backendQuestions.every(
+        (item) => item.kategori_id === categoryId,
+      );
+
+      if (!sameCategory) {
+        throw new Error(
+          "Soal berasal dari kategori berbeda. Satu sesi kuis harus menggunakan satu kategori.",
+        );
+      }
+
       const mixedQuestions = shuffleArray(backendQuestions);
 
       setQuestions(mixedQuestions);
       setCurrentIndex(0);
       setScore(0);
       setSelectedAnswer(null);
+      setQuizAnswers([]);
+      setQuizCategoryId(categoryId);
 
       sessionStorage.setItem("quiz_questions", JSON.stringify(mixedQuestions));
       sessionStorage.setItem("currentIndex", "0");
       sessionStorage.setItem("score", "0");
     } catch (error) {
       console.error("Gagal mengambil soal dari backend:", error);
-      setErrorMessage(error.message || "Tidak dapat terhubung ke backend.");
+
+      if (error instanceof TypeError) {
+        setErrorMessage(
+          "Tidak dapat terhubung ke server. Pastikan backend sedang berjalan.",
+        );
+      } else {
+        setErrorMessage(
+          error.message || "Terjadi kesalahan saat mengambil soal.",
+        );
+      }
+
       setQuestions([]);
+      setQuizAnswers([]);
+      setQuizCategoryId(null);
     } finally {
       setLoading(false);
     }
@@ -123,7 +163,21 @@ function MainQuiz() {
 
       const newScore = isCorrect ? score + 1 : score;
 
+      // Simpan ID soal dan opsi yang benar-benar dipilih.
+      const newQuizAnswers =
+        chosenAnswer !== null
+          ? [
+              ...quizAnswers,
+              {
+                soal_id: currentQuestion.id,
+                opsi_id: chosenAnswer.id,
+              },
+            ]
+          : quizAnswers;
+
+      setQuizAnswers(newQuizAnswers);
       setScore(newScore);
+
       sessionStorage.setItem("score", String(newScore));
 
       if (currentIndex < questions.length - 1) {
@@ -145,12 +199,23 @@ function MainQuiz() {
             state: {
               score: newScore,
               total: questions.length,
+              kategori_id: quizCategoryId,
+              jawaban: newQuizAnswers,
             },
           });
         }, 2200);
       }
     },
-    [isFinishing, selectedAnswer, questions, currentIndex, score, navigate],
+    [
+      isFinishing,
+      selectedAnswer,
+      questions,
+      currentIndex,
+      score,
+      quizAnswers,
+      quizCategoryId,
+      navigate,
+    ],
   );
 
   const buttonStyle = {

@@ -8,6 +8,8 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
 
   const [playerName, setPlayerName] = useState("");
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     if (!quizData) {
@@ -17,24 +19,67 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
 
   if (!quizData) return null;
 
-  const { score, total } = quizData;
+  const { score, total, kategori_id, jawaban } = quizData;
 
-  const handleSave = (event) => {
+  const handleSave = async (event) => {
     event.preventDefault();
 
-    const newEntry = {
-      name: playerName.trim() || "Pemain Anonim",
-      score,
-      total,
-      date: new Date().toLocaleDateString("id-ID"),
-    };
+    if (saving || saved) return;
+
+    const namaPemain = playerName.trim() || "Pemain Anonim";
+
+    if (!kategori_id) {
+      setErrorMessage("Kategori kuis tidak ditemukan. Silakan ulangi kuis.");
+      return;
+    }
+
+    if (!Array.isArray(jawaban) || jawaban.length !== total) {
+      setErrorMessage(
+        "Ada soal yang belum dijawab. Silakan ulangi kuis agar semua jawaban tersimpan.",
+      );
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage("");
 
     try {
+      // Simpan riwayat ke backend terlebih dahulu.
+      const response = await fetch("http://localhost:3001/riwayat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nama_pemain: namaPemain,
+          kategori_id,
+          jawaban,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.pesan ||
+            result.message ||
+            "Gagal menyimpan riwayat ke backend.",
+        );
+      }
+
+      // Backend berhasil, lanjut simpan leaderboard lokal.
+      const newEntry = {
+        name: namaPemain,
+        score,
+        total,
+        date: new Date().toLocaleDateString("id-ID"),
+      };
+
       const savedData = localStorage.getItem("quizHistory");
       const history = savedData ? JSON.parse(savedData) : [];
 
       if (!Array.isArray(history)) {
-        throw new Error("Data leaderboard tidak valid.");
+        throw new Error("Data leaderboard lokal tidak valid.");
       }
 
       localStorage.setItem(
@@ -45,8 +90,10 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
       setSaved(true);
       navigate("/leaderboard");
     } catch (error) {
-      console.error("Gagal menyimpan leaderboard:", error);
-      alert("Gagal menyimpan skor. Silakan coba lagi.");
+      console.error("Gagal menyimpan skor:", error);
+      setErrorMessage(error.message || "Tidak dapat terhubung ke backend.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -104,12 +151,26 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
               maxLength={30}
             />
 
+            {errorMessage && (
+              <p
+                role="alert"
+                style={{
+                  color: "#b91c1c",
+                  fontSize: 14,
+                  margin: "12px 0",
+                }}
+              >
+                {errorMessage}
+              </p>
+            )}
+
             <button
               type="submit"
               className="primary-button"
               style={{ width: "100%" }}
+              disabled={saving}
             >
-              Simpan Skor
+              {saving ? "Menyimpan..." : "Simpan Skor"}
             </button>
           </form>
         )}
