@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -30,12 +30,13 @@ function shuffleArray(array) {
 }
 
 function MainQuiz() {
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
 
-  // Data untuk dikirim ke backend
   const [quizAnswers, setQuizAnswers] = useState([]);
   const [quizCategoryId, setQuizCategoryId] = useState(null);
 
@@ -45,24 +46,79 @@ function MainQuiz() {
 
   const navigate = useNavigate();
 
-  const fetchQuestions = useCallback(async () => {
-    setLoading(true);
+  const fetchCategories = useCallback(async () => {
     setErrorMessage("");
-    setIsFinishing(false);
 
     try {
       const response = await fetch("http://localhost:3001/soal");
 
       if (!response.ok) {
-        throw new Error(
-          `Gagal mengambil soal dari server. Status: ${response.status}`,
-        );
+        throw new Error(`Gagal mengambil soal. Status: ${response.status}`);
       }
 
       const data = await response.json();
 
       if (!Array.isArray(data) || data.length === 0) {
         throw new Error("Soal belum tersedia di database.");
+      }
+
+      const categoryMap = new Map();
+
+      data.forEach((item) => {
+        if (!item.kategori_id || !item.kategori) {
+          throw new Error(`Kategori soal ID ${item.id} tidak valid.`);
+        }
+
+        categoryMap.set(String(item.kategori_id), {
+          id: item.kategori_id,
+          nama: item.kategori,
+        });
+      });
+
+      const categoryList = [...categoryMap.values()];
+
+      setCategories(categoryList);
+      setSelectedCategory(String(categoryList[0].id));
+    } catch (error) {
+      console.error("Gagal mengambil kategori:", error);
+      setErrorMessage(
+        error instanceof TypeError
+          ? "Tidak dapat terhubung ke server. Pastikan backend berjalan."
+          : error.message,
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const startQuiz = useCallback(async () => {
+    if (!selectedCategory) return;
+
+    setLoading(true);
+    setErrorMessage("");
+    setIsFinishing(false);
+
+    try {
+      const category = categories.find(
+        (item) => String(item.id) === selectedCategory,
+      );
+
+      if (!category) {
+        throw new Error("Kategori tidak ditemukan.");
+      }
+
+      const response = await fetch(
+        `http://localhost:3001/soal?kategori=${encodeURIComponent(category.nama)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil soal. Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("Belum ada soal untuk kategori ini.");
       }
 
       const backendQuestions = data.map((item) => {
@@ -74,8 +130,8 @@ function MainQuiz() {
           throw new Error(`Format soal ID ${item.id} tidak valid.`);
         }
 
-        if (!item.kategori_id) {
-          throw new Error(`Kategori soal ID ${item.id} tidak valid.`);
+        if (String(item.kategori_id) !== selectedCategory) {
+          throw new Error("Soal tidak sesuai dengan kategori yang dipilih.");
         }
 
         return {
@@ -93,19 +149,6 @@ function MainQuiz() {
         };
       });
 
-      // Backend mengharuskan satu kategori dalam satu sesi kuis.
-      const categoryId = backendQuestions[0].kategori_id;
-
-      const sameCategory = backendQuestions.every(
-        (item) => item.kategori_id === categoryId,
-      );
-
-      if (!sameCategory) {
-        throw new Error(
-          "Soal berasal dari kategori berbeda. Satu sesi kuis harus menggunakan satu kategori.",
-        );
-      }
-
       const mixedQuestions = shuffleArray(backendQuestions);
 
       setQuestions(mixedQuestions);
@@ -113,35 +156,37 @@ function MainQuiz() {
       setScore(0);
       setSelectedAnswer(null);
       setQuizAnswers([]);
-      setQuizCategoryId(categoryId);
+      setQuizCategoryId(category.id);
 
       sessionStorage.setItem("quiz_questions", JSON.stringify(mixedQuestions));
       sessionStorage.setItem("currentIndex", "0");
       sessionStorage.setItem("score", "0");
     } catch (error) {
-      console.error("Gagal mengambil soal dari backend:", error);
-
-      if (error instanceof TypeError) {
-        setErrorMessage(
-          "Tidak dapat terhubung ke server. Pastikan backend sedang berjalan.",
-        );
-      } else {
-        setErrorMessage(
-          error.message || "Terjadi kesalahan saat mengambil soal.",
-        );
-      }
-
+      console.error("Gagal memulai kuis:", error);
+      setErrorMessage(
+        error instanceof TypeError
+          ? "Tidak dapat terhubung ke server."
+          : error.message,
+      );
       setQuestions([]);
       setQuizAnswers([]);
       setQuizCategoryId(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedCategory, categories]);
 
   useEffect(() => {
-    fetchQuestions();
-  }, [fetchQuestions]);
+      const controller = new AbortController();
+
+      const loadCategories = async () => {
+        await fetchCategories(controller.signal);
+      };
+
+      loadCategories();
+
+      return () => controller.abort();
+  }, [fetchCategories]);
 
   const handleNextQuestion = useCallback(
     (force = false) => {
@@ -149,7 +194,6 @@ function MainQuiz() {
       if (!force && selectedAnswer === null) return;
 
       const currentQuestion = questions[currentIndex];
-
       if (!currentQuestion) return;
 
       const chosenAnswer =
@@ -163,7 +207,6 @@ function MainQuiz() {
 
       const newScore = isCorrect ? score + 1 : score;
 
-      // Simpan ID soal dan opsi yang benar-benar dipilih.
       const newQuizAnswers =
         chosenAnswer !== null
           ? [
@@ -177,15 +220,12 @@ function MainQuiz() {
 
       setQuizAnswers(newQuizAnswers);
       setScore(newScore);
-
       sessionStorage.setItem("score", String(newScore));
 
       if (currentIndex < questions.length - 1) {
         const nextIndex = currentIndex + 1;
-
         setCurrentIndex(nextIndex);
         setSelectedAnswer(null);
-
         sessionStorage.setItem("currentIndex", String(nextIndex));
       } else {
         setIsFinishing(true);
@@ -229,21 +269,67 @@ function MainQuiz() {
     return (
       <main className="app-shell">
         <div className="quiz-layout">
-          <LoadingView message="Memuat soal dari backend..." />
+          <LoadingView message="Memuat kategori dan soal..." />
         </div>
       </main>
     );
   }
 
-  if (errorMessage || questions.length === 0) {
+  if (errorMessage) {
     return (
       <main className="app-shell">
         <div className="quiz-layout">
           <ErrorView
-            errorMessage={errorMessage || "Soal belum tersedia."}
-            onRetry={fetchQuestions}
+            errorMessage={errorMessage}
+            onRetry={fetchCategories}
             buttonStyle={buttonStyle}
           />
+        </div>
+      </main>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <main className="app-shell">
+        <div className="quiz-layout">
+          <h2>Pilih Kategori Kuis</h2>
+
+          <select
+            value={selectedCategory}
+            onChange={(event) => setSelectedCategory(event.target.value)}
+            style={{ padding: 12, width: "100%", marginBottom: 16 }}
+          >
+            {categories.map((category) => (
+              <option key={category.id} value={String(category.id)}>
+                {category.nama}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            className="primary-button"
+            onClick={startQuiz}
+            style={{ width: "100%" }}
+          >
+            Mulai Kuis
+          </button>
+
+          <nav className="home-navigation">
+            <Link to="/petualangan" className="secondary-button">
+              Peta Petualangan
+            </Link>
+            <Link to="/leaderboard" className="secondary-button">
+              Leaderboard
+            </Link>
+            <Link to="/buat-soal" className="secondary-button">
+              Buat Soal
+            </Link>
+            <Link to="/daftar-soal" className="secondary-button">
+              Daftar Soal
+            </Link>
+          </nav>
         </div>
       </main>
     );
@@ -264,19 +350,16 @@ function MainQuiz() {
 
         <nav className="home-navigation">
           <Link to="/petualangan" className="secondary-button">
-            🦕 Peta Petualangan
+            Peta Petualangan
           </Link>
-
           <Link to="/leaderboard" className="secondary-button">
-            🏆 Leaderboard
+            Leaderboard
           </Link>
-
           <Link to="/buat-soal" className="secondary-button">
-            ✏️ Buat Soal
+            Buat Soal
           </Link>
-
           <Link to="/daftar-soal" className="secondary-button">
-            📚 Daftar Soal
+            Daftar Soal
           </Link>
         </nav>
 
@@ -284,17 +367,12 @@ function MainQuiz() {
           <div className="dino-finish-overlay">
             <div className="dino-finish-card">
               <div className="dino-stars">✦ ✧ ★ ✧ ✦</div>
-
               <div className="dino-finish-sprite">🦖</div>
-
               <h2>Petualangan Selesai!</h2>
-
               <p>Yeay! Kamu berhasil menyelesaikan kuis!</p>
-
               <div className="dino-finish-loading">
                 <span />
               </div>
-
               <small>Menyiapkan hasil kuis...</small>
             </div>
           </div>

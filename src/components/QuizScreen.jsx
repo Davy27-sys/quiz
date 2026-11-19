@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import AnswerButton from "./AnswerButton";
 
 export default function QuizScreen({
@@ -9,12 +9,39 @@ export default function QuizScreen({
   handleNextQuestion,
   isFinishing,
 }) {
+  const currentQuestion = questions?.[currentIndex];
+
+  if (!currentQuestion) {
+    return <div className="quiz-container">Memuat soal...</div>;
+  }
+
+  return (
+    <QuizQuestion
+      key={currentQuestion.id ?? currentIndex}
+      currentQuestion={currentQuestion}
+      currentIndex={currentIndex}
+      totalQuestions={questions.length}
+      selectedAnswer={selectedAnswer}
+      setSelectedAnswer={setSelectedAnswer}
+      handleNextQuestion={handleNextQuestion}
+      isFinishing={isFinishing}
+    />
+  );
+}
+
+function QuizQuestion({
+  currentQuestion,
+  currentIndex,
+  totalQuestions,
+  selectedAnswer,
+  setSelectedAnswer,
+  handleNextQuestion,
+  isFinishing,
+}) {
   const [timeLeft, setTimeLeft] = useState(15);
   const [showResult, setShowResult] = useState(false);
   const audioContextRef = useRef(null);
   const playedSoundRef = useRef(false);
-
-  const currentQuestion = questions?.[currentIndex];
 
   const playSound = (isCorrect) => {
     try {
@@ -63,12 +90,6 @@ export default function QuizScreen({
   };
 
   useEffect(() => {
-    setTimeLeft(15);
-    setShowResult(false);
-    playedSoundRef.current = false;
-  }, [currentIndex]);
-
-  useEffect(() => {
     if (selectedAnswer !== null || timeLeft <= 0 || isFinishing) {
       return;
     }
@@ -81,16 +102,14 @@ export default function QuizScreen({
   }, [timeLeft, selectedAnswer, isFinishing]);
 
   const chosenAnswer =
-    selectedAnswer === null ? null : currentQuestion?.answers[selectedAnswer];
+    selectedAnswer === null ? null : currentQuestion.answers[selectedAnswer];
 
   const isCorrect =
     chosenAnswer !== null &&
-    chosenAnswer?.text === currentQuestion?.correctAnswer;
+    chosenAnswer?.text === currentQuestion.correctAnswer;
 
   useEffect(() => {
-    if (selectedAnswer === null || !currentQuestion) return;
-
-    setShowResult(false);
+    if (selectedAnswer === null) return;
 
     const answer = currentQuestion.answers[selectedAnswer];
     const correct = answer?.text === currentQuestion.correctAnswer;
@@ -105,26 +124,20 @@ export default function QuizScreen({
     }, 3000);
 
     return () => clearTimeout(delay);
-  }, [selectedAnswer, currentIndex]);
-
-  if (!currentQuestion) {
-    return <div className="quiz-container">Memuat soal...</div>;
-  }
+  }, [selectedAnswer, currentQuestion]);
 
   return (
     <div className="quiz-container">
       <div style={{ textAlign: "center", marginBottom: 24 }}>
         <div className="dino-quiz-icon">🦖</div>
-
         <h2 className="quiz-title">Dino Quiz</h2>
-
         <p style={{ color: "#718096", margin: 0 }}>
           Uji pengetahuanmu di dunia dinosaurus
         </p>
       </div>
 
       <div className="question-number">
-        SOAL {currentIndex + 1} / {questions.length}
+        SOAL {currentIndex + 1} / {totalQuestions}
       </div>
 
       <div
@@ -139,7 +152,7 @@ export default function QuizScreen({
         <div
           style={{
             height: "100%",
-            width: `${((currentIndex + 1) / questions.length) * 100}%`,
+            width: `${((currentIndex + 1) / totalQuestions) * 100}%`,
             background: "#4d8b70",
             transition: "width 0.3s ease",
           }}
@@ -252,7 +265,7 @@ export default function QuizScreen({
       >
         {isFinishing
           ? "🦖 Petualangan Selesai..."
-          : currentIndex === questions.length - 1
+          : currentIndex === totalQuestions - 1
             ? "Selesaikan Kuis →"
             : "Soal Berikutnya →"}
       </button>
