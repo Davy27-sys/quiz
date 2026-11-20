@@ -1,47 +1,63 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
   const navigate = useNavigate();
+
   const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    const controller = new AbortController();
+
+    const loadHistory = async () => {
+      try {
+        const response = await fetch("http://localhost:3001/leaderboard", {
+          signal: controller.signal,
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.pesan || "Gagal mengambil data leaderboard.");
+        }
+
+        if (!Array.isArray(result.data)) {
+          throw new Error("Format data leaderboard tidak valid.");
+        }
+
+        setHistory(result.data);
+        setErrorMessage("");
+      } catch (error) {
+        if (error.name === "AbortError") return;
+
+        console.error("Gagal memuat leaderboard:", error);
+        setErrorMessage(
+          "Leaderboard tidak dapat dimuat. Pastikan backend berjalan.",
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
     loadHistory();
-  }, []);
 
-  const loadHistory = () => {
-    try {
-      const saved = localStorage.getItem("quizHistory");
+    return () => {
+      controller.abort();
+    };
+  }, [retryCount]);
 
-      if (!saved) {
-        setHistory([]);
-        return;
-      }
+  const categories = [
+    ...new Set(history.map((item) => item.kategori || "Tanpa Kategori")),
+  ];
 
-      const data = JSON.parse(saved);
-
-      if (!Array.isArray(data)) {
-        setHistory([]);
-        return;
-      }
-
-      setHistory([...data].sort((a, b) => b.score - a.score));
-    } catch (error) {
-      console.error("Gagal membaca leaderboard:", error);
-      setHistory([]);
-    }
-  };
-
-  const handleDeleteHistory = () => {
-    const confirmDelete = window.confirm(
-      "Yakin ingin menghapus semua history leaderboard?",
-    );
-
-    if (!confirmDelete) return;
-
-    localStorage.removeItem("quizHistory");
-    setHistory([]);
-  };
+  const sortedHistory = [...history].sort(
+    (a, b) => Number(b.nilai) - Number(a.nilai),
+  );
 
   return (
     <div
@@ -59,7 +75,33 @@ export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
         </p>
       </div>
 
-      {history.length === 0 ? (
+      {loading ? (
+        <div style={{ padding: 24, textAlign: "center" }}>
+          Memuat leaderboard...
+        </div>
+      ) : errorMessage ? (
+        <div
+          style={{
+            padding: 24,
+            background: "#fee2e2",
+            borderRadius: 8,
+            textAlign: "center",
+            color: "#991b1b",
+          }}
+        >
+          <p>{errorMessage}</p>
+
+          <button
+            type="button"
+            onClick={() => {
+              setLoading(true);
+              setRetryCount((count) => count + 1);
+            }}
+          >
+            Coba Lagi
+          </button>
+        </div>
+      ) : history.length === 0 ? (
         <div
           style={{
             padding: 24,
@@ -68,48 +110,32 @@ export default function LeaderboardScreen({ containerStyle, buttonStyle }) {
             textAlign: "center",
           }}
         >
-          Belum ada skor. Yuk, mulai bermain!
+          Belum ada riwayat permainan. Yuk, mulai bermain!
         </div>
       ) : (
-        <>
-          <ol style={{ paddingLeft: 26 }}>
-            {history.map((item, index) => (
-              <li
-                key={`${item.name}-${item.date}-${index}`}
-                style={{ marginBottom: 16 }}
-              >
-                <strong>
-                  {index + 1}. {item.name}
-                </strong>
+        categories.map((category) => {
+          const categoryHistory = sortedHistory.filter(
+            (item) => (item.kategori || "Tanpa Kategori") === category,
+          );
 
-                <div style={{ marginTop: 6 }}>
-                  Skor: {item.score} / {item.total || 5}
-                </div>
+          return (
+            <div key={category} style={{ marginBottom: 24 }}>
+              <h3>{category}</h3>
 
-                <small style={{ color: "#718096" }}>{item.date}</small>
-              </li>
-            ))}
-          </ol>
+              <ol style={{ paddingLeft: 26 }}>
+                {categoryHistory.map((item) => (
+                  <li key={item.id} style={{ marginBottom: 16 }}>
+                    <strong>{item.nama_pemain || "Pemain Anonim"}</strong>
 
-          <button
-            type="button"
-            onClick={handleDeleteHistory}
-            style={{
-              width: "100%",
-              marginTop: 8,
-              padding: "12px 16px",
-              border: "none",
-              borderRadius: 8,
-              background: "#dc2626",
-              color: "#ffffff",
-              fontSize: 15,
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
-          >
-            🗑️ Hapus History
-          </button>
-        </>
+                    <div style={{ marginTop: 6 }}>Skor: {item.nilai}</div>
+
+                    <small style={{ color: "#718096" }}>{item.tanggal}</small>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          );
+        })
       )}
 
       <button

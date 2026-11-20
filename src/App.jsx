@@ -46,11 +46,11 @@ function MainQuiz() {
 
   const navigate = useNavigate();
 
-  const fetchCategories = useCallback(async () => {
-    setErrorMessage("");
-
+  const fetchCategories = useCallback(async (signal) => {
     try {
-      const response = await fetch("http://localhost:3001/soal");
+      const response = await fetch("http://localhost:3001/soal", {
+        signal,
+      });
 
       if (!response.ok) {
         throw new Error(`Gagal mengambil soal. Status: ${response.status}`);
@@ -79,15 +79,23 @@ function MainQuiz() {
 
       setCategories(categoryList);
       setSelectedCategory(String(categoryList[0].id));
+      setErrorMessage("");
     } catch (error) {
+      if (error.name === "AbortError") {
+        return;
+      }
+
       console.error("Gagal mengambil kategori:", error);
+
       setErrorMessage(
         error instanceof TypeError
           ? "Tidak dapat terhubung ke server. Pastikan backend berjalan."
           : error.message,
       );
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -163,11 +171,13 @@ function MainQuiz() {
       sessionStorage.setItem("score", "0");
     } catch (error) {
       console.error("Gagal memulai kuis:", error);
+
       setErrorMessage(
         error instanceof TypeError
           ? "Tidak dapat terhubung ke server."
           : error.message,
       );
+
       setQuestions([]);
       setQuizAnswers([]);
       setQuizCategoryId(null);
@@ -177,15 +187,14 @@ function MainQuiz() {
   }, [selectedCategory, categories]);
 
   useEffect(() => {
-      const controller = new AbortController();
+    const controller = new AbortController();
 
-      const loadCategories = async () => {
-        await fetchCategories(controller.signal);
-      };
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchCategories(controller.signal);
 
-      loadCategories();
-
-      return () => controller.abort();
+    return () => {
+      controller.abort();
+    };
   }, [fetchCategories]);
 
   const handleNextQuestion = useCallback(
@@ -224,8 +233,10 @@ function MainQuiz() {
 
       if (currentIndex < questions.length - 1) {
         const nextIndex = currentIndex + 1;
+
         setCurrentIndex(nextIndex);
         setSelectedAnswer(null);
+
         sessionStorage.setItem("currentIndex", String(nextIndex));
       } else {
         setIsFinishing(true);
@@ -281,7 +292,10 @@ function MainQuiz() {
         <div className="quiz-layout">
           <ErrorView
             errorMessage={errorMessage}
-            onRetry={fetchCategories}
+            onRetry={() => {
+              setLoading(true);
+              fetchCategories();
+            }}
             buttonStyle={buttonStyle}
           />
         </div>
