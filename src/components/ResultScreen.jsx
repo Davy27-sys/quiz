@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 export default function ResultScreen({ containerStyle, buttonStyle }) {
@@ -32,11 +32,8 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
       setErrorMessage("Kategori kuis tidak ditemukan. Silakan ulangi kuis.");
       return;
     }
-
-    if (!Array.isArray(jawaban) || jawaban.length !== total) {
-      setErrorMessage(
-        "Ada soal yang belum dijawab. Silakan ulangi kuis agar semua jawaban tersimpan.",
-      );
+    if (!Array.isArray(jawaban)) {
+      setErrorMessage("Data jawaban tidak valid.");
       return;
     }
 
@@ -54,6 +51,7 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
           nama_pemain: namaPemain,
           kategori_id,
           jawaban,
+          total,
         }),
       });
 

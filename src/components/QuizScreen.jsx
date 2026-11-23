@@ -101,6 +101,12 @@ function QuizQuestion({
     return () => clearTimeout(timer);
   }, [timeLeft, selectedAnswer, isFinishing]);
 
+  useEffect(() => {
+    if (timeLeft === 0 && selectedAnswer === null && !isFinishing) {
+      handleNextQuestion(true);
+    }
+  }, [timeLeft, selectedAnswer, isFinishing, handleNextQuestion]);
+
   const chosenAnswer =
     selectedAnswer === null ? null : currentQuestion.answers[selectedAnswer];
 
