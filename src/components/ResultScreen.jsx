@@ -89,7 +89,23 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
       navigate("/leaderboard");
     } catch (error) {
       console.error("Gagal menyimpan skor:", error);
-      setErrorMessage(error.message || "Tidak dapat terhubung ke backend.");
+
+      if (error instanceof TypeError) {
+        setErrorMessage(
+          "Tidak dapat terhubung ke server. Periksa koneksi server, lalu coba simpan kembali.",
+        );
+      } else if (
+        error.message ===
+        "Jumlah soal tidak sesuai dengan soal aktif pada kategori"
+      ) {
+        setErrorMessage(
+          "Skor belum dapat disimpan karena data soal berubah. Silakan coba lagi setelah masalah diperbaiki.",
+        );
+      } else {
+        setErrorMessage(
+          error.message || "Skor gagal disimpan. Silakan coba kembali.",
+        );
+      }
     } finally {
       setSaving(false);
     }
