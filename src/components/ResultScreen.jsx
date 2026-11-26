@@ -10,6 +10,7 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [questionChanged, setQuestionChanged] = useState(false);
 
   useEffect(() => {
     if (!quizData) {
@@ -98,8 +99,9 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
         error.message ===
         "Jumlah soal tidak sesuai dengan soal aktif pada kategori"
       ) {
+        setQuestionChanged(true);
         setErrorMessage(
-          "Skor belum dapat disimpan karena data soal berubah. Silakan coba lagi setelah masalah diperbaiki.",
+          "Data soal berubah saat kuis berlangsung. Skor tetap ditampilkan, tetapi tidak dapat disimpan. Silakan tekan Main Lagi untuk memulai sesi baru.",
         );
       } else {
         setErrorMessage(
@@ -182,9 +184,13 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
               type="submit"
               className="primary-button"
               style={{ width: "100%" }}
-              disabled={saving}
+              disabled={saving || questionChanged}
             >
-              {saving ? "Menyimpan..." : "Simpan Skor"}
+              {saving
+                ? "Menyimpan..."
+                : questionChanged
+                  ? "Sesi Tidak Berlaku"
+                  : "Simpan Skor"}
             </button>
           </form>
         )}
