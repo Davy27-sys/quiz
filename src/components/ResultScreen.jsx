@@ -6,11 +6,18 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
   const navigate = useNavigate();
   const quizData = location.state;
 
+  const changedMessage =
+    "Data soal berubah saat kuis berlangsung. Skor tetap ditampilkan, tetapi tidak dapat disimpan. Silakan tekan Main Lagi untuk memulai sesi baru.";
+
   const [playerName, setPlayerName] = useState("");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [questionChanged, setQuestionChanged] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(
+    quizData?.questionChanged ? changedMessage : "",
+  );
+  const [questionChanged, setQuestionChanged] = useState(
+    Boolean(quizData?.questionChanged),
+  );
 
   useEffect(() => {
     if (!quizData) {
@@ -25,7 +32,7 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
   const handleSave = async (event) => {
     event.preventDefault();
 
-    if (saving || saved) return;
+    if (saving || saved || questionChanged) return;
 
     const namaPemain = playerName.trim() || "Pemain Anonim";
 
@@ -33,6 +40,7 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
       setErrorMessage("Kategori kuis tidak ditemukan. Silakan ulangi kuis.");
       return;
     }
+
     if (!Array.isArray(jawaban)) {
       setErrorMessage("Data jawaban tidak valid.");
       return;
@@ -100,9 +108,16 @@ export default function ResultScreen({ containerStyle, buttonStyle }) {
         "Jumlah soal tidak sesuai dengan soal aktif pada kategori"
       ) {
         setQuestionChanged(true);
-        setErrorMessage(
-          "Data soal berubah saat kuis berlangsung. Skor tetap ditampilkan, tetapi tidak dapat disimpan. Silakan tekan Main Lagi untuk memulai sesi baru.",
-        );
+        setErrorMessage(changedMessage);
+
+        // Pertahankan status sesi tidak berlaku setelah refresh.
+        navigate(location.pathname, {
+          replace: true,
+          state: {
+            ...quizData,
+            questionChanged: true,
+          },
+        });
       } else {
         setErrorMessage(
           error.message || "Skor gagal disimpan. Silakan coba kembali.",
